@@ -1,0 +1,31 @@
+from .base_scheme import SQLAlchemyBase
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, func, Index
+from ..enums.video_enum import VideoStatusEnum
+from sqlalchemy.orm import relationship
+class Video(SQLAlchemyBase):
+    __tablename__ = "videos"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    youtube_title = Column(String, nullable=False)
+    youtube_url = Column(String, nullable=False, unique=True)
+    youtube_id = Column(String, nullable=False, unique=True)
+    vector_database_status = Column(
+        String,
+        nullable=False,
+        default=VideoStatusEnum.PROCESSING.value,
+        server_default=VideoStatusEnum.PROCESSING.value,
+    )
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+    chats = relationship(
+        "Chat",
+        back_populates="video",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    __table_args__ = (
+        Index("ix_videos_youtube_id", "youtube_id"),
+    )
