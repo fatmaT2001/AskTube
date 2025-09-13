@@ -7,6 +7,8 @@ from sqlalchemy import text
 
 
 from src.routes import base_router
+from src.routes import chat_router
+
 from src.utils.settings import get_settings
 from src.models.db_scheme import SQLAlchemyBase
 
@@ -24,8 +26,8 @@ async def lifespan(app: FastAPI):
 
     try:
         db_engine = create_async_engine(postgres_conn)
-        db_clint=sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
-        app.state.db_clint = db_clint
+        db_client=sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
+        app.state.db_client = db_client
     except Exception as e:
         print(f"Error connecting to the database: {e}")
         raise e
@@ -60,6 +62,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(base_router)
+app.include_router(chat_router)
 
 
 

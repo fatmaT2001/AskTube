@@ -4,3 +4,5 @@ pydantic-settings
 sqlalchemy
 asyncpg==0.30.0
 psycopg2==2.9.10
+requests
+youtube-transcript-api
