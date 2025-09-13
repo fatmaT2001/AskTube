@@ -1,5 +1,5 @@
 from .base_model import BaseModel
-from ..db_scheme import Video
+from ..db_scheme import video_scheme
 from sqlalchemy import text as sql_text
 from ..enums import TablesEnum, VideoStatusEnum
 
@@ -9,7 +9,7 @@ class VideoModel(BaseModel):
         self.table_name = TablesEnum.VIDEOS.value
         
     
-    async def add_Video(self,video_data:Video)->Video:
+    async def add_Video(self,video_data:video_scheme)->video_scheme:
         async with self.db_clint() as session:
             async with session.begin():
                 session.add(video_data)
@@ -18,7 +18,7 @@ class VideoModel(BaseModel):
         return video_data
     
 
-    async def get_video_by_id(self, video_id: int) -> Video | None:
+    async def get_video_by_id(self, video_id: int) -> video_scheme | None:
         async with self.db_clint() as session:
             result = await session.execute(
                 sql_text(f"SELECT * FROM {self.table_name} WHERE id = :video_id"),

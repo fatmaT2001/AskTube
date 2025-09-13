@@ -1,5 +1,4 @@
 from pydantic import BaseModel,field_validator
-from ...models.db_models.chat import Chat
 from ...utils.settings import get_settings
 
 
