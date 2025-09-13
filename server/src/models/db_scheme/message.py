@@ -1,9 +1,10 @@
 from .base_scheme import SQLAlchemyBase
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text,func
 from sqlalchemy.orm import relationship
+from ..enums import TablesEnum
 
 class Message(SQLAlchemyBase):
-    __tablename__ = "messages"  #
+    __tablename__ = TablesEnum.MESSAGES.value  
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     

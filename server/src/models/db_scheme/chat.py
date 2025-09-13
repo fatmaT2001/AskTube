@@ -1,9 +1,10 @@
 from .base_scheme import SQLAlchemyBase
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, func
 from sqlalchemy.orm import relationship
+from ..enums import TablesEnum
 
 class Chat(SQLAlchemyBase):
-    __tablename__ = "chats"
+    __tablename__ = TablesEnum.CHATS.value
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String, nullable=False)

@@ -2,8 +2,10 @@ from .base_scheme import SQLAlchemyBase
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, func, Index
 from ..enums.video_enum import VideoStatusEnum
 from sqlalchemy.orm import relationship
+from ..enums import TablesEnum
+
 class Video(SQLAlchemyBase):
-    __tablename__ = "videos"
+    __tablename__ = TablesEnum.VIDEOS.value
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     youtube_title = Column(String, nullable=False)
