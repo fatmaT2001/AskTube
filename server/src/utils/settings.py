@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     PORT: int
     DBNAME: str
 
+    # YouTube settings
+    YOUTUBE_API_KEY: str
+    PREFERRED_LANGS: list[str]
+
 
 
 
