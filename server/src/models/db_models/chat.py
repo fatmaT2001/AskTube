@@ -19,10 +19,9 @@ class ChatModel(BaseModel):
     
 
     async def get_all_chats(self)->list[chat_scheme]:
-        async with self.db_Clint() as session:
+        async with self.db_clint() as session:
             result = await session.execute(sql_text(f"SELECT * FROM {self.table_name}"))
-            chats = result.fetchall()
-
+            chats = result.mappings().all()
         return [chat_scheme(**row) for row in chats]
     
     async def get_chat_by_id(self,chat_id:int)->chat_scheme|None:
@@ -31,7 +30,20 @@ class ChatModel(BaseModel):
                 sql_text(f"SELECT * FROM {self.table_name} WHERE id = :chat_id")
                 .bindparams(chat_id=chat_id)
             )
-            row = result.fetchone()
+            row = result.mappings().fetchone()
             if row:
                 return chat_scheme(**row)
             return None
+        
+
+    async def delete_chat(self,chat_id:int)->bool:
+        async with self.db_clint() as session:
+            async with session.begin():
+                result = await session.execute(
+                    sql_text(f"DELETE FROM {self.table_name} WHERE id = :chat_id")
+                    .bindparams(chat_id=chat_id)
+                )
+                if result.rowcount == 0:
+                    return False
+            await session.commit()
+        return True

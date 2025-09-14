@@ -17,6 +17,7 @@ class Video(SQLAlchemyBase):
         default=VideoStatusEnum.PROCESSING.value,
         server_default=VideoStatusEnum.PROCESSING.value,
     )
+    is_transcript_available = Column(Integer, nullable=False, default=0, server_default="0")
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -28,6 +29,3 @@ class Video(SQLAlchemyBase):
         passive_deletes=True,
     )
 
-    __table_args__ = (
-        Index("ix_videos_youtube_id", "youtube_id"),
-    )

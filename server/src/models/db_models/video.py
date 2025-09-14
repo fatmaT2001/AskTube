@@ -38,3 +38,12 @@ class VideoModel(BaseModel):
             await session.commit()
            
     
+
+    async def get_video_by_youtube_id(self, youtube_id: str) -> video_scheme | None:
+        async with self.db_clint() as session:
+            result = await session.execute(
+                sql_text(f"SELECT * FROM {self.table_name} WHERE youtube_id = :youtube_id"),
+                {"youtube_id": youtube_id}
+            )
+            video = result.fetchone()
+            return video if video else None

@@ -1,6 +1,6 @@
 from pydantic import BaseModel,field_validator
 from ...utils.settings import get_settings
-
+from enum import Enum
 
 class CreateNewChatRequest(BaseModel):
     youtube_link: str
@@ -12,3 +12,14 @@ class CreateNewChatRequest(BaseModel):
         if v not in get_settings().PREFERRED_LANGS:
             raise ValueError(f"Language '{v}' is not supported. Allowed: {get_settings().PREFERRED_LANGS}")
         return v
+    
+
+
+class SendMessageRequest(BaseModel):
+    message: str
+
+
+
+class RoleMessage(str,Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
