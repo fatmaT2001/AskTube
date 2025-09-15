@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine,AsyncEngine
@@ -6,11 +7,11 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
 
 
-from src.routes import base_router
-from src.routes import chat_router
+from .routes import base_router
+from .routes import chat_router
 
-from src.utils.settings import get_settings
-from src.models.db_scheme import SQLAlchemyBase
+from .utils.settings import get_settings
+from .models.db_scheme import SQLAlchemyBase
 
 
 
@@ -42,13 +43,12 @@ async def lifespan(app: FastAPI):
 
 
     # create tables
-    # try:
-    #     async with db_engine.begin() as conn:
-    #         print(SQLAlchemyBase.metadata.tables)
-    #         await conn.run_sync(SQLAlchemyBase.metadata.create_all)
-    # except Exception as e:
-    #     print(f"Error creating tables: {e}")
-    #     raise e
+    try:
+        async with db_engine.begin() as conn:
+            await conn.run_sync(SQLAlchemyBase.metadata.create_all)
+    except Exception as e:
+        print(f"Error creating tables: {e}")
+        raise e
     
     
     print("Starting up fastapi...")
@@ -61,6 +61,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["chrome-extension://ilibhpohflfhegdkeaihbflipicpimfj"],  # Your extension's origin
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(base_router)
 app.include_router(chat_router)
 

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AskTube — Chat</title>
+  <link rel="stylesheet" href="chat.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button id="back-btn" title="Back">←</button>
+    <div class="title-wrap">
+      <div id="chat-title">Chat</div>
+      <div id="chat-sub" class="sub"></div>
+    </div>
+  </header>
+
+  <main id="chat-wrap">
+    <div id="chat-content" aria-live="polite"></div>
+  </main>
+
+  <footer class="composer">
+    <textarea id="msg-input" rows="1" placeholder="Type a message… (Shift+Enter for newline)"></textarea>
+    <button id="send-btn" title="Send">Send</button>
+  </footer>
+
+  <script src="chat.js" type="module"></script>
+</body>
+</html>

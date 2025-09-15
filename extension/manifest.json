@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "AskTube",
+  "version": "0.1.0",
+  "description": "Side panel to manage study chats for YouTube links.",
+  "permissions": ["sidePanel"],
+  "side_panel": { "default_path": "pages/sidepanel/index.html" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_title": "AskTube" }
+}
