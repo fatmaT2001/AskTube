@@ -14,6 +14,8 @@ from .utils.settings import get_settings
 from .models.db_scheme import SQLAlchemyBase
 
 
+from .stores.vectordb.vectordb_factory import VectorDBFactory
+
 
 async def create_tables(engine: AsyncEngine, Base):
     async with engine.begin() as conn:
@@ -50,11 +52,23 @@ async def lifespan(app: FastAPI):
         print(f"Error creating tables: {e}")
         raise e
     
+
+    # setup vector db
+    try:
+        vector_db_factory = VectorDBFactory()
+        vector_db = vector_db_factory.create_vectordb(get_settings().VECTOR_DB_PROVIDER)
+        await vector_db.connect()
+        app.state.vector_db = vector_db
+    except Exception as e:
+        print(f"Error setting up vector database: {e}")
+        raise e
+    
     
     print("Starting up fastapi...")
     yield
     # --- shutdown ---
     await db_engine.dispose()
+    await app.state.vector_db.disconnect()
     print("Shutting down fastapi...")
 
 

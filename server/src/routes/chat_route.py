@@ -1,11 +1,14 @@
 from fastapi import APIRouter,Request
 from .routes_scheme.chats_scheme import CreateNewChatRequest, SendMessageRequest, RoleMessage
 from ..models.db_scheme import chat_scheme, video_scheme,message_scheme
-from  ..controllers import VideoController
+from  ..controllers import NLPController,VideoController
 from ..models.enums.video_enum import VideoStatusEnum
 from ..models.db_models import VideoModel,ChatModel,MessageModel
 from fastapi.responses import JSONResponse
 from datetime import datetime
+from ..utils.settings import get_settings
+from ..stores.vectordb.vectordb_interface import VectorDBInterface
+
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 """
@@ -31,9 +34,12 @@ async def create_new_chat(request:Request,new_chat: CreateNewChatRequest):
 
 
     db_client = request.app.state.db_client
+    db_vector:VectorDBInterface= request.app.state.vector_db 
     video_model=VideoModel(db_client)
     chat_model=ChatModel(db_client)
     video_controller = VideoController()
+    nlp_controller = NLPController()
+
     ## to do: check if it in the database and the status is completed
 
 
@@ -50,6 +56,21 @@ async def create_new_chat(request:Request,new_chat: CreateNewChatRequest):
     except Exception as e:
         return {"error": f"Error processing YouTube link: {e}"}
     
+    # preprocessing the transcript if available
+    try:
+        if is_transcript_availabe and transcript:
+            processed_transcript=nlp_controller.prepare_youtube_transcript_for_embedding(transcript=transcript,chunk_duration=int(get_settings().CHUNK_DURATION * 60))
+            print(f"Processed transcript into {len(processed_transcript)} chunks for embedding.")
+    except Exception as e:
+        return {"error": f"Error preprocessing transcript: {e}"}
+
+    try:
+        if is_transcript_availabe and transcript:
+            # create embeddings and save to vector db
+            await db_vector.index(embedding_ready_data=processed_transcript,video_id=video_id)
+            print(f"Transcript chunks embedded and saved to vector database for video ID: {video_id}")
+    except Exception as e:
+        return {"error": f"Error saving embeddings to vector database: {e}"}    
 
     try:
         # create video object
@@ -68,7 +89,7 @@ async def create_new_chat(request:Request,new_chat: CreateNewChatRequest):
 
     except Exception as e:
         return {"error": f"Error saving chat to database: {e}"}
-
+    
     return JSONResponse(content={
         "video_id": video_id,
         "video_title": video_title,
@@ -190,3 +211,21 @@ async def delete_chat_by_id(request:Request,chat_id:int):
         return JSONResponse(content={"message": "Chat deleted successfully"})
     except Exception as e:
         return {"error": f"Error deleting chat from database: {e}"}
+
+
+
+
+@router.get("/search_result")
+async def search_result(request:Request,query:str,video_id:str):
+    """
+    get search result from vector db
+
+    """
+    db_vector:VectorDBInterface= request.app.state.vector_db 
+    try:
+
+        search_results=await db_vector.search(user_query=query,video_id=video_id,top_k=5)
+        print(f"Search results: {search_results}")
+        return JSONResponse(content={"results":search_results})
+    except Exception as e:
+        return {"error": f"Error getting search results from vector database: {e}"}
