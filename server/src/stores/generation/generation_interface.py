@@ -15,3 +15,7 @@ class GenerationInterface(ABC):
     def generate_answer(self, message: list[dict]) -> str:
         """Generate text based on the provided prompt."""
         pass
+    @abstractmethod
+    def get_tool_agrs(self,msg):
+        """Extract tool arguments from the model's message."""
+        pass

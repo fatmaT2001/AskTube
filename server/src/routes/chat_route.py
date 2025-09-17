@@ -1,7 +1,7 @@
 from fastapi import APIRouter,Request
 from .routes_scheme.chats_scheme import CreateNewChatRequest, SendMessageRequest, RoleMessage
 from ..models.db_scheme import chat_scheme, video_scheme,message_scheme
-from  ..controllers import NLPController,VideoController
+from  ..controllers import NLPController,VideoController,AgMPentController
 from ..models.enums.video_enum import VideoStatusEnum
 from ..models.db_models import VideoModel,ChatModel,MessageModel
 from fastapi.responses import JSONResponse
@@ -145,6 +145,8 @@ async def send_message_to_chat(request:Request,chat_id:int,message_request:SendM
     db_client = request.app.state.db_client
     chat_model=ChatModel(db_client)
     message_model=MessageModel(db_client)
+    vector_db:VectorDBInterface= request.app.state.vector_db 
+    generation:GenerationInterface= request.app.state.generation_model
     try:
         chat_data=await chat_model.get_chat_by_id(chat_id=chat_id)
         if not chat_data:
@@ -160,7 +162,16 @@ async def send_message_to_chat(request:Request,chat_id:int,message_request:SendM
         return {"error": f"Error saving message to database: {e}"}
     
     try:
-        assistant_response="This is a placeholder response from the assistant."
+        # get chat history
+        history_messages=await message_model.get_chat_history(chat_id=chat_id)
+        history=[{"role":msg.role,"content":msg.content} for msg in history_messages[-10:]] 
+        agent_controller= AgMPentController(vector_db=vector_db,generation=generation,video_id="H6pWY2VQ9xI")
+        assistant_response= await agent_controller.get_model_answer(user_query=message_request.message,history=[])
+        print(f"Assistant response: {assistant_response}")
+    except Exception as e:
+        return {"error": f"Error getting chat history from database: {e}"}
+
+    try:
         assistant_message_obj=message_scheme(chat_id=chat_id,role=RoleMessage.ASSISTANT.value,content=assistant_response)
         assistant_message_created_data=await message_model.add_message(message_data=assistant_message_obj,chat_id=chat_id)
         print(f"Assistant Message saved to database with ID: {assistant_message_created_data}")

@@ -67,6 +67,7 @@ async def lifespan(app: FastAPI):
     try:
         generation_factory = GenerationFactory()
         generation_model = generation_factory.create_provider(get_settings().GENERATION_MODEL_PROVIDER)
+        generation_model.connect()
         app.state.generation_model = generation_model
     except Exception as e:
         print(f"Error setting up generation model: {e}")
@@ -77,6 +78,7 @@ async def lifespan(app: FastAPI):
     # --- shutdown ---
     await db_engine.dispose()
     await app.state.vector_db.disconnect()
+    app.state.generation_model.disconnect()
     print("Shutting down fastapi...")
 
 
