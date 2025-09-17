@@ -14,7 +14,7 @@ from .utils.settings import get_settings
 from .models.db_scheme import SQLAlchemyBase
 
 
-from .stores.vectordb.vectordb_factory import VectorDBFactory
+from .stores import VectorDBFactory, GenerationFactory
 
 
 async def create_tables(engine: AsyncEngine, Base):
@@ -63,6 +63,14 @@ async def lifespan(app: FastAPI):
         print(f"Error setting up vector database: {e}")
         raise e
     
+    # setup generation model
+    try:
+        generation_factory = GenerationFactory()
+        generation_model = generation_factory.create_provider(get_settings().GENERATION_MODEL_PROVIDER)
+        app.state.generation_model = generation_model
+    except Exception as e:
+        print(f"Error setting up generation model: {e}")
+        raise e
     
     print("Starting up fastapi...")
     yield

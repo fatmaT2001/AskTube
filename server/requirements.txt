@@ -7,3 +7,6 @@ psycopg2==2.9.10
 requests
 youtube-transcript-api
 pinecone[asyncio]
+python-dotenv
+litellm[proxy]==1.44.9
+openai

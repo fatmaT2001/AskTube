@@ -21,9 +21,15 @@ class Settings(BaseSettings):
     PINECONE_RERANKING_MODEL: str
     PINECONE_HOST_URL:str
 
+    # Litellm settings
+    GROQ_API_KEY: str
+    LITELLM_BASE_URL: str
+    LITELLM_BASE_MODEL:str
+
 
     # Other settings
     VECTOR_DB_PROVIDER:str
+    GENERATION_MODEL_PROVIDER:str
 
 
 

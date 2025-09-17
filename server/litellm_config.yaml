@@ -1,0 +1,25 @@
+router_settings:
+  enable_pre_call_checks: true
+
+model_list:
+  - model_name: "groq-gpt-oss-20b"
+    litellm_params:
+      model: "groq/openai/gpt-oss-20b"
+      api_key: "os.environ/GROQ_API_KEY"
+
+  - model_name: "groq-gpt-oss-120b"
+    litellm_params:
+      model: "groq/openai/gpt-oss-120b"
+      api_key: "os.environ/GROQ_API_KEY"
+
+  - model_name: "groq-llama-4-scout"
+    litellm_params:
+      model: "groq/meta-llama/llama-4-scout-17b-16e-instruct"
+      api_key: "os.environ/GROQ_API_KEY"
+
+litellm_settings:
+  num_retries: 3
+  fallbacks: [{"groq-gpt-oss-20b": "groq-llama-4-scout"},{"groq-llama-4-scout": "groq-gpt-oss-120b"}]
+  request_timeout: 10
+  allowed_fails: 3 
+  cooldown_time: 30

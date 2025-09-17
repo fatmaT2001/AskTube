@@ -7,7 +7,9 @@ from ..models.db_models import VideoModel,ChatModel,MessageModel
 from fastapi.responses import JSONResponse
 from datetime import datetime
 from ..utils.settings import get_settings
-from ..stores.vectordb.vectordb_interface import VectorDBInterface
+from ..stores import VectorDBInterface
+from ..stores import GenerationInterface
+from ..stores.generation.providers.litellm import LiteLLMProvider
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -215,7 +217,8 @@ async def delete_chat_by_id(request:Request,chat_id:int):
 
 
 
-@router.get("/search_result")
+
+@router.get("/search")
 async def search_result(request:Request,query:str,video_id:str):
     """
     get search result from vector db
@@ -229,3 +232,27 @@ async def search_result(request:Request,query:str,video_id:str):
         return JSONResponse(content={"results":search_results})
     except Exception as e:
         return {"error": f"Error getting search results from vector database: {e}"}
+
+
+
+
+
+
+@router.get("/get_answer")
+async def search_result(query:str):
+    """
+    get search result from vector db
+
+    """
+    lite_llm= LiteLLMProvider()
+    lite_llm.connect()
+
+    try:
+        massges=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": query}
+        ]
+        response= await lite_llm.generate_answer(message=massges)
+        return JSONResponse(content={"response":response})
+    except Exception as e:
+        return {"error": f"Error getting response from LLM: {e}"}
