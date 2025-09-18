@@ -2,24 +2,36 @@ router_settings:
   enable_pre_call_checks: true
 
 model_list:
-  - model_name: "groq-gpt-oss-20b"
+  - model_name: "map_reduce_models"
     litellm_params:
-      model: "groq/openai/gpt-oss-20b"
+      model: "groq/meta-llama/llama-4-scout-17b-16e-instruct"
       api_key: "os.environ/GROQ_API_KEY"
 
-  - model_name: "groq-gpt-oss-120b"
+  - model_name: "map_reduce_models"
     litellm_params:
-      model: "groq/openai/gpt-oss-120b"
+      model: "groq/meta-llama/llama-4-maverick-17b-128e-instruct"
       api_key: "os.environ/GROQ_API_KEY"
 
-  - model_name: "groq-llama-4-scout"
+  - model_name: "map_reduce_models"
+    litellm_params:
+      model: "groq/llama-3.1-8b-instant"
+      api_key: "os.environ/GROQ_API_KEY"
+
+
+
+  - model_name: "answer_generation_models"
+    litellm_params:
+      model: "groq/llama-3.3-70b-versatile"
+      api_key: "os.environ/GROQ_API_KEY"
+
+  - model_name: "answer_generation_models"
     litellm_params:
       model: "groq/meta-llama/llama-4-scout-17b-16e-instruct"
       api_key: "os.environ/GROQ_API_KEY"
 
 litellm_settings:
   num_retries: 3
-  fallbacks: [{"groq-gpt-oss-20b": "groq-llama-4-scout"},{"groq-llama-4-scout": "groq-gpt-oss-120b"}]
+  fallbacks: [{"answer_generation_models": "map_reduce_models"}]
   request_timeout: 10
   allowed_fails: 3 
   cooldown_time: 30

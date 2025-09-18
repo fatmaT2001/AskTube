@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str
     LITELLM_BASE_URL: str
     LITELLM_BASE_MODEL:str
+    LITELLM_MAP_REDUCE_MODEL:str
 
 
     # Other settings
