@@ -32,10 +32,22 @@ class VideoModel(BaseModel):
         async with self.db_clint() as session:
             async with session.begin():
                 await session.execute(
-                    sql_text(f"UPDATE {self.table_name} SET status = :new_status WHERE id = :video_id"),
+                    sql_text(f"UPDATE {self.table_name} SET vector_status = :new_status WHERE id = :video_id"),
                     {"new_status": new_status, "video_id": video_id}
                 )
+
             await session.commit()
+
+
+    async def add_video_summary(self, video_id: int, summary: str) -> None:
+        async with self.db_clint() as session:
+            async with session.begin():
+                await session.execute(
+                    sql_text(f"UPDATE {self.table_name} SET video_summary = :summary WHERE id = :video_id"),
+                    {"summary": summary, "video_id": video_id}
+                )
+            await session.commit()
+
            
     
 

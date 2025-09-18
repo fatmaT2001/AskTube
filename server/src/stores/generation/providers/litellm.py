@@ -2,6 +2,11 @@ from ..generation_interface import GenerationInterface
 import openai
 from ....utils.settings import get_settings
 import json
+from typing import List, Dict, Any
+from ...prompts.map_prompt import MAP_PROMPT
+from ...prompts.reduce_prompt import REDUCE_PROMPT
+import asyncio
+
 class LiteLLMProvider(GenerationInterface):
     def __init__(self):
         self.client = None
@@ -32,6 +37,8 @@ class LiteLLMProvider(GenerationInterface):
                         }
                     }
                 ]
+        
+        self.batch_size = 6
 
 
     def connect(self):
@@ -68,9 +75,58 @@ class LiteLLMProvider(GenerationInterface):
                 return msg
             
         return "No response from LiteLLM"
+    
+    
+    async def _get_chunk_summary(self,chunk: str) -> List[str]:
+        message = [
+            {"role": "system", "content": MAP_PROMPT},
+            {"role": "user", "content": chunk}
+        ]
 
+        response = await self.client.chat.completions.create(
+            model=get_settings().LITELLM_MAP_REDUCE_MODEL,
+            messages=message,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+        )
+        content = response.choices[0].message.content
+        print("Chunk summary:", content)
+        return content
+    
+    
+    async def _run_batched_tasks(self,chunks: List[str]):
+        total_summaries = []
 
+        for i in range(0, len(chunks), self.batch_size):
+            batch = chunks[i:i + self.batch_size]
 
-        
+            tasks = [
+                    self._get_chunk_summary(chunk)
+                    for chunk in batch
+            ]
+
+            batched_summaries = await asyncio.gather(*tasks)
+            for chunk_data in batched_summaries:
+                total_summaries.append(chunk_data)
+            await asyncio.sleep(1.5) 
+
+        return total_summaries
+    
+
+    async def generate_video_summary(self,chunks: List[str],video_title:str) -> Dict[str, List[str]]:
+
+        total_summaries =  await self._run_batched_tasks(chunks=chunks)
+
+        response = await self.client.chat.completions.create(
+            model=get_settings().LITELLM_MAP_REDUCE_MODEL,
+            temperature=0.0,
+            messages=[
+                {"role": "system", "content": REDUCE_PROMPT.format(video_title=video_title, max_final_words=360)},
+                {"role": "user", "content":"\n".join(total_summaries)}
+            ],
+        )
+        final_summary = response.choices[0].message.content
+        print(f"final summay: {final_summary} ")
+        return final_summary
 
 

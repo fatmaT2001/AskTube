@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-
+from typing import List, Dict, Any
 class GenerationInterface(ABC):
     @abstractmethod
     def connect(self):
@@ -18,4 +18,9 @@ class GenerationInterface(ABC):
     @abstractmethod
     def get_tool_agrs(self,msg):
         """Extract tool arguments from the model's message."""
+        pass
+
+    @abstractmethod
+    def generate_video_summary(self,chunks: List[str],video_title:str) -> Dict[str, List[str]]:
+        """Generate text using the provided tool arguments."""
         pass

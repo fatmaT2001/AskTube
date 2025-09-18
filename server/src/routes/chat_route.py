@@ -1,4 +1,4 @@
-from fastapi import APIRouter,Request
+from fastapi import APIRouter,Request,BackgroundTasks
 from .routes_scheme.chats_scheme import CreateNewChatRequest, SendMessageRequest, RoleMessage
 from ..models.db_scheme import chat_scheme, video_scheme,message_scheme
 from  ..controllers import NLPController,VideoController,AgMPentController
@@ -23,28 +23,91 @@ To Do Routes
 """
 
 
-@router.post("/create_new_chat")
-async def create_new_chat(request:Request,new_chat: CreateNewChatRequest):
+
+async def process_video_task(fastapi_request:Request,video_id:str,youtube_video_id:str,video_title:str,is_transcript_availabe:bool=False,youtube_transcript:str=None):
+    """
+    background task to process the video
+    1. preprocess the transcript if available
+    2. generate video summary
+    3. create embeddings and save to vector db
+    4. create video entry in the database
+    """
+    db_client = fastapi_request.app.state.db_client
+    db_vector:VectorDBInterface= fastapi_request.app.state.vector_db 
+    video_model=VideoModel(db_client)
+    nlp_controller = NLPController()
+    generation_tool:GenerationInterface= fastapi_request.app.state.generation_model
+
+    if is_transcript_availabe and youtube_transcript:
+        # step1: preprocess the transcript to generate chunks using chunk duration from settings
+        try:
+            processed_transcript=nlp_controller.prepare_youtube_transcript_for_embedding(transcript=youtube_transcript,chunk_duration=int(get_settings().CHUNK_DURATION * 60))
+            print(f"Processed transcript into {len(processed_transcript)} chunks for embedding.")
+        except Exception as e:
+            print(f"Error preprocessing transcript: {e}")
+            await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+            return 
+
+        # step2: generate video summary using the generation model
+        try:
+            if processed_transcript:
+                chunks=[chunk["text"] for chunk in processed_transcript]
+                print(f"number of chunks {len(chunks)}")
+                video_summary= await generation_tool.generate_video_summary(chunks=chunks,video_title=video_title)
+                print(f"Generated video summary.{video_summary}")
+            else:
+                video_summary="No transcript available to generate summary."
+        except Exception as e:
+            print(f"Error generating video summary: {e}")
+            await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+            return 
+        
+        try:
+            await video_model.add_video_summary(video_id=video_id,summary=video_summary)
+            print(f"Video summary updated in database for video ID: {video_id}")
+        except Exception as e:
+            print(f"Error updating video summary in database: {e}")
+            await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+            return
+
+        # step3: create embeddings and save to vector db
+        try:
+            if processed_transcript:
+                await db_vector.index(embedding_ready_data=processed_transcript,video_id=video_id)
+                print(f"Transcript chunks embedded and saved to vector database for video ID: {video_id}")
+        except Exception as e:
+            print(f"Error saving embeddings to vector database: {e}")
+            await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+            return
+        
+        # step4: update video status to completed
+        try:
+            await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.READY.value)
+            print(f"Video processing completed for video ID: {video_id}")
+
+        except Exception as e:
+            print(f"Error updating video status to completed: {e}")
+            await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+            return
+        
+    else:
+        print("No transcript available; skipping processing steps.")
+        await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+        return
+    
+    return
+    
+
+
+
+@router.post("/add_new_video")
+async def add_new_video(request:Request,new_chat: CreateNewChatRequest,background_tasks: BackgroundTasks):
     """
     create a new chat based on youtube link
-    1. check if the youtube link is valid and get the video id and title, and transcript availability
-    2. check if the video is already in the database and the status is completed
-    3. if not, create a new video entry in the database with status processing
-    4. create a new chat entry in the database linked to the video
-    5. return the chat id and title
     """
-
-
     db_client = request.app.state.db_client
-    db_vector:VectorDBInterface= request.app.state.vector_db 
     video_model=VideoModel(db_client)
-    chat_model=ChatModel(db_client)
     video_controller = VideoController()
-    nlp_controller = NLPController()
-
-    ## to do: check if it in the database and the status is completed
-
-
     try:
         # first get the video id and title from the youtube link
         video_details=video_controller.get_video_info(new_chat.youtube_link)
@@ -58,47 +121,60 @@ async def create_new_chat(request:Request,new_chat: CreateNewChatRequest):
     except Exception as e:
         return {"error": f"Error processing YouTube link: {e}"}
     
-    # preprocessing the transcript if available
     try:
-        if is_transcript_availabe and transcript:
-            processed_transcript=nlp_controller.prepare_youtube_transcript_for_embedding(transcript=transcript,chunk_duration=int(get_settings().CHUNK_DURATION * 60))
-            print(f"Processed transcript into {len(processed_transcript)} chunks for embedding.")
-    except Exception as e:
-        return {"error": f"Error preprocessing transcript: {e}"}
-
-    try:
-        if is_transcript_availabe and transcript:
-            # create embeddings and save to vector db
-            await db_vector.index(embedding_ready_data=processed_transcript,video_id=video_id)
-            print(f"Transcript chunks embedded and saved to vector database for video ID: {video_id}")
-    except Exception as e:
-        return {"error": f"Error saving embeddings to vector database: {e}"}    
-
-    try:
-        # create video object
-        
-        video_obj = video_scheme(youtube_title=video_title,youtube_url=new_chat.youtube_link,youtube_id=video_id,vector_database_status=VideoStatusEnum.PROCESSING.value,is_transcript_available=int(is_transcript_availabe))
+        # create video object        
+        video_obj = video_scheme(youtube_title=video_title,youtube_url=new_chat.youtube_link,youtube_id=video_id,vector_status=VideoStatusEnum.PROCESSING.value,is_transcript_available=int(is_transcript_availabe))
         video_created_data=await video_model.add_Video(video_data=video_obj)
         print(f"Video saved to database with ID: {video_created_data}")
     except Exception as e:
         return {"error": f"Error saving video to database: {e}"}
 
+    # process the video in the background
     try:
-        chat_name=f"{video_title}:{datetime.now().strftime('%Y-%m-%d')}"
-        chat_obj=chat_scheme(title=chat_name,video_id=video_created_data.id)
-        chat_created_data=await chat_model.create_chat(chat_data=chat_obj)
-        print(f"Chat saved to database with ID: {chat_created_data}")
-
+        background_tasks.add_task(process_video_task,fastapi_request=request,video_id=video_created_data.id,youtube_video_id=video_id,is_transcript_availabe=is_transcript_availabe,youtube_transcript=transcript,video_title=video_title)
+        print(f"Background task started for video ID: {video_created_data.id}")
     except Exception as e:
-        return {"error": f"Error saving chat to database: {e}"}
+        return {"error": f"Error starting background task: {e}"}
+    
     
     return JSONResponse(content={
-        "video_id": video_id,
+        "video_id": video_created_data.id,
         "video_title": video_title,
-        "transcript_language_exist": is_transcript_availabe,
-        "chat_id": chat_created_data.id,
-        "chat_title": chat_created_data.title
+        "transcript_language_exist": is_transcript_availabe
     })
+
+
+
+
+@router.get("/check_video_status/{video_id}")
+async def check_video_status(request:Request,video_id:str):
+    """
+    check the video processing status
+    """
+    db_client = request.app.state.db_client
+    video_model=VideoModel(db_client)
+    chat_model=ChatModel(db_client)
+    try:
+        video_data=await video_model.get_video_by_id(video_id=int(video_id))
+        if not video_data:
+            return JSONResponse(content={"error": "Video not found"},status_code=404)
+        video_status=video_data.vector_status
+
+        if video_status==VideoStatusEnum.READY.value:
+            # create a new chat entry in the database linked to the video
+            try:
+                chat_name=f"{video_data.youtube_title}:{datetime.now().strftime('%Y-%m-%d')}"
+                chat_obj=chat_scheme(title=chat_name,video_id=video_data.id)
+                chat_created_data=await chat_model.create_chat(chat_data=chat_obj)
+                print(f"Chat saved to database with ID: {chat_created_data}")
+                video_id=video_data.youtube_id
+                return JSONResponse(content={"video_id":video_id,"chat_id":chat_created_data.id,"status":video_status,"video_summary":video_data.video_summary})
+            except Exception as e:
+                return {"error": f"Error saving chat to database: {e}"}
+        else:
+            return JSONResponse(content={"video_id":video_id,"status":video_status})
+    except Exception as e:
+        return {"error": f"Error getting video from database: {e}"}
 
 
 @router.get("/get_all_chats")
