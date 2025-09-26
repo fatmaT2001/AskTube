@@ -9,7 +9,7 @@ class Video(SQLAlchemyBase):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     youtube_title = Column(String, nullable=False)
-    youtube_url = Column(String, nullable=False, unique=True)
+    youtube_url = Column(String, nullable=False, unique=False)
     youtube_id = Column(String, nullable=False, unique=False)
     vector_status = Column(
         String,

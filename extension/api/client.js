@@ -2,7 +2,7 @@ const backend_url = 'http://127.0.0.1:8000/chat';
 
 
 export async function create_new_chat({ url }) {
-  const response = await fetch(`${backend_url}/create_new_chat`, {
+  const response = await fetch(`${backend_url}/add_new_video`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -96,4 +96,51 @@ export async function get_chat_messages(chatId) {
     ts: msg.created_at
   }));
 
+}
+
+
+export async function create_new_video({ url }) {
+  const response = await fetch(`${backend_url}/add_new_video`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      youtube_link: url,
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to add video');
+  }
+
+  const video = await response.json();
+  console.log("Added video:", video);
+  return {
+    id: video.video_id,
+    title: video.video_title,
+    status: video.status
+  };
+}
+
+export async function get_video_status(videoId) {
+  const response = await fetch(`${backend_url}/check_video_status/${videoId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch video status');
+  }
+
+  const data = await response.json();
+  const status_data = {
+    status: data.status,
+    video_summary: data.video_summary ? data.video_summary : "No summary available",
+    chat_id: data.chat_id ? data.chat_id : null
+  };
+  console.log("Video status:", status_data);
+  return status_data;
 }

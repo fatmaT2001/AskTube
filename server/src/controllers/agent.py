@@ -24,12 +24,14 @@ class AgMPentController:
         ]
         return preprocessed_results
     
-    async def get_model_answer(self, user_query: str,history:list=[]) -> str:
+    async def get_model_answer(self, user_query: str,history:list=[],summary:str='') -> str:
         """Generate an answer based on the user query and relevant chunks."""
         # Construct the message for the generation model
         user_prompt = CHAT_USER_PROMPT.format(user_query=user_query, history=history)
+        system_prompt = CHAT_SYSTEM_PROMPT.replace("{video_summary}", summary)
+       
         message = [
-            {"role": "system", "content": CHAT_SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             
             {"role": "user", "content": user_prompt}
         ]

@@ -220,6 +220,7 @@ async def send_message_to_chat(request:Request,chat_id:int,message_request:SendM
     """
     db_client = request.app.state.db_client
     chat_model=ChatModel(db_client)
+    video_model=VideoModel(db_client)
     message_model=MessageModel(db_client)
     vector_db:VectorDBInterface= request.app.state.vector_db 
     generation:GenerationInterface= request.app.state.generation_model
@@ -230,10 +231,18 @@ async def send_message_to_chat(request:Request,chat_id:int,message_request:SendM
     except Exception as e:
         return {"error": f"Error getting chat from database: {e}"}
     
+    # get video info from chat
+    try:
+        video_data=await video_model.get_video_by_id(video_id=chat_data.video_id)
+        if not video_data or video_data.vector_status != VideoStatusEnum.READY.value:
+            return JSONResponse(content={"error": "Associated video is not ready for chat"},status_code=400)
+    except Exception as e:  
+        return {"error": f"Error getting associated video from database: {e}"}
+    
+
     try:
         message_obj=message_scheme(chat_id=chat_id,role=RoleMessage.USER.value,content=message_request.message)
         message_created_data=await message_model.add_message(message_data=message_obj,chat_id=chat_id)
-        print(f"Message saved to database with ID: {message_created_data}")
     except Exception as e:
         return {"error": f"Error saving message to database: {e}"}
     
@@ -241,21 +250,21 @@ async def send_message_to_chat(request:Request,chat_id:int,message_request:SendM
         # get chat history
         history_messages=await message_model.get_chat_history(chat_id=chat_id)
         history=[{"role":msg.role,"content":msg.content} for msg in history_messages[-10:]] 
-        agent_controller= AgMPentController(vector_db=vector_db,generation=generation,video_id="H6pWY2VQ9xI")
-        assistant_response= await agent_controller.get_model_answer(user_query=message_request.message,history=[])
-        print(f"Assistant response: {assistant_response}")
+        agent_controller= AgMPentController(vector_db=vector_db,generation=generation,video_id=video_data.id)
+        assistant_response= await agent_controller.get_model_answer(user_query=message_request.message,history=history,summary=video_data.video_summary )
     except Exception as e:
         return {"error": f"Error getting chat history from database: {e}"}
 
     try:
-        assistant_message_obj=message_scheme(chat_id=chat_id,role=RoleMessage.ASSISTANT.value,content=assistant_response)
+        # Extract content from ChatCompletionMessage if needed
+        assistant_content = assistant_response.content if hasattr(assistant_response, 'content') else str(assistant_response)
+        assistant_message_obj=message_scheme(chat_id=chat_id,role=RoleMessage.ASSISTANT.value,content=assistant_content)
         assistant_message_created_data=await message_model.add_message(message_data=assistant_message_obj,chat_id=chat_id)
-        print(f"Assistant Message saved to database with ID: {assistant_message_created_data}")
     except Exception as e:
         return {"error": f"Error saving assistant message to database: {e}"}
 
 
-    return JSONResponse(content={"message": assistant_response})
+    return JSONResponse(content={"message": assistant_content})
 
 
 

@@ -1,10 +1,11 @@
-import {send_message_to_chat,get_chat_messages} from "../../api/client.js"
+import {send_message_to_chat, get_chat_messages, get_video_status} from "../../api/client.js";
 
-// ---- read params (title, url, id) ----
+// ---- read params (title, url, id, videoId) ----
 const p = new URLSearchParams(location.search);
 const chatTitle = p.get("title") || "Chat";
 const chatUrl = p.get("url") || "";
-const chatId = p.get("id") || null; 
+const chatId = p.get("id") || null;
+const videoId = p.get("videoId") || null;
 
 // ---- DOM ----
 const backBtn = document.getElementById("back-btn");
@@ -14,13 +15,15 @@ const wrap = document.getElementById("chat-wrap");
 const content = document.getElementById("chat-content");
 const input = document.getElementById("msg-input");
 const sendBtn = document.getElementById("send-btn");
+const statusEl = document.getElementById("video-status"); // New status element
 
 // ---- init header ----
 titleEl.textContent = chatTitle;
 subEl.textContent = chatUrl;
 
 // ---- state ----
-let messages = []; 
+let messages = [];
+let videoReady = false;
 
 // ---- helpers ----
 function scrollToBottom() {
@@ -58,8 +61,33 @@ function render() {
   scrollToBottom();
 }
 
+async function checkVideoStatus() {
+  if (!videoId) return;
+  try {
+    const status_data = await get_video_status(videoId);
+    console.log("Video status:", status_data);
+    statusEl.textContent = `Video Status: ${status_data.status}`;
+    if (status_data.status === "READY") {
+      videoReady = true;
+      input.disabled = false;
+      sendBtn.disabled = false;
+    } else if (status_data.status === "FAILED") {
+      statusEl.textContent = "Video processing failed. Please try again.";
+      input.disabled = true;
+      sendBtn.disabled = true;
+    } else {
+      setTimeout(checkVideoStatus, 5000); // Poll every 5 seconds
+    }
+  } catch (e) {
+    console.error("Failed to fetch video status:", e);
+    statusEl.textContent = "Error fetching video status.";
+  }
+}
+
 // ---- send flow ----
 async function sendMessage() {
+  if (!videoReady) return;
+
   const text = input.value.trim();
   if (!text) return;
 
@@ -78,7 +106,6 @@ async function sendMessage() {
   scrollToBottom();
 
   try {
-    // simulate API wait (2s)
     const response = await send_message_to_chat(chatId, text);
 
     // fake assistant reply
@@ -122,8 +149,10 @@ async function boot() {
     content.innerHTML = `<div class="error">Failed to load messages.</div>`;
     console.error("Failed to load messages:", e);
   }
-}
 
+  // Check video status
+  checkVideoStatus();
+}
 
 // ---- boot ----
 boot();

@@ -1,4 +1,4 @@
-import {create_new_chat,get_all_chats} from "../../api/client.js"
+import {create_new_video, get_all_chats} from "../../api/client.js";
 
 
 let chats =[];
@@ -25,7 +25,6 @@ function render() {
       <div class="item-title">${c.title ?? "Untitled chat"}</div>
       <div class="item-url">${c.url}</div>
     `;
-    // FIX: use `c`, not `chat`
     div.addEventListener("click", () => openChatPage(c));
     els.list.appendChild(div);
   });
@@ -41,15 +40,20 @@ els.create.addEventListener("click", async () => {
   els.create.textContent = "Creating…";
 
   try {
-    // TODO: call your backend here. For now, simulate latency:
-    const chat=await create_new_chat({url});
+    const video = await create_new_video({ url });
+    const chat = {
+      id: video.id,
+      title: video.title,
+      url,
+      videoId: video.id, // Pass videoId for status tracking
+    };
     chats.push(chat);
     els.url.value = "";
     render();
     openChatPage(chat);
   } catch (e) {
     console.error(e);
-    alert("Failed to create chat.");
+    alert("Failed to create video.");
   } finally {
     els.create.disabled = false;
     els.create.textContent = originalText;
@@ -59,16 +63,13 @@ els.create.addEventListener("click", async () => {
 // ---------- navigation to chat page ----------
 function openChatPage(chat) {
   const params = new URLSearchParams({
-    id: String(chat.id),        
+    id: String(chat.id),
     title: chat.title ?? "",
     url: chat.url ?? "",
+    videoId: chat.videoId, // Include videoId in URL parameters
   });
 
-  // FIX: correct path & use chrome.runtime.getURL for extensions
-  const chatUrl = chrome.runtime.getURL(
-    "pages/chat/chat.html"
-  ) + "?" + params.toString();
-
+  const chatUrl = chrome.runtime.getURL("pages/chat/chat.html") + "?" + params.toString();
   window.location.href = chatUrl;
 }
 
@@ -83,5 +84,6 @@ async function boot() {
     els.empty.classList.remove("hidden");
   }
 }
+
 // boot
 boot();
