@@ -7,8 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
 
 
-from .routes import base_router
-from .routes import chat_router
+from .routes import base_router, chat_router,videos_router
 
 from .utils.settings import get_settings
 from .models.db_scheme import SQLAlchemyBase
@@ -93,6 +92,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(base_router)
+app.include_router(videos_router)
 app.include_router(chat_router)
 
 
