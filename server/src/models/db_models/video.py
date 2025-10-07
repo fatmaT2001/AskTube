@@ -59,3 +59,13 @@ class VideoModel(BaseModel):
             )
             video = result.fetchone()
             return video if video else None
+        
+
+    async def get_all_user_videos(self) -> list[video_scheme]:
+        async with self.db_clint() as session:
+            result = await session.execute(
+                sql_text(f"SELECT * FROM {self.table_name} ORDER BY created_at DESC")
+            )
+            videos = result.fetchall()
+            return videos if videos else []
+        

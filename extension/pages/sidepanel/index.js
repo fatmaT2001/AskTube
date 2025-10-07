@@ -1,89 +1,234 @@
-import {create_new_video, get_all_chats} from "../../api/client.js";
+// keep your original client.js function names
+import { get_all_videos, add_new_video, check_video_status, get_all_chats } from "../../api/client.js";
 
-
-let chats =[];
-
-const els = {
-  url: document.getElementById("yt-url"),
-  create: document.getElementById("create"),
-  list: document.getElementById("list"),
-  empty: document.getElementById("empty"),
+const $ = (s) => document.querySelector(s);
+const ui = {
+  url: $("#yt-url"),
+  add: $("#add-video"),
+  list: $("#video-list"),
+  empty: $("#empty-videos"),
+  alerts: $("#alerts"),
+  chatList: $("#chat-list"),
+  emptyChats: $("#empty-chats"),
+  tabs: document.querySelectorAll(".tab"),
+  pages: document.querySelectorAll(".tab-page"),
 };
 
+let videos = [];
+let chats = [];
+
+function showAlert(msg, type = "info") {
+  const alertClass = type === "error" ? "err" : type === "success" ? "success" : "info";
+  ui.alerts.innerHTML = `<div class="alert ${alertClass}">${msg}</div>`;
+  setTimeout(() => (ui.alerts.innerHTML = ""), 4000); // Show longer for processing updates
+}
+
+function statusPill(status) {
+  const s = (status || "").toLowerCase();
+  const cls =
+    s === "ready" ? "ok" :
+    s === "processing" ? "wait" :
+    s === "received" ? "wait" :
+    s === "failed" ? "err" : "";
+
+  // Add spinning icon for processing status
+  const icon = (s === "processing" || s === "received") ? "⏳" : "";
+  const displayText = status ? status.toUpperCase() : "UNKNOWN";
+
+  return `<span class="pill ${cls} ${(s === "processing" || s === "received") ? "processing" : ""}">${icon} ${displayText}</span>`;
+}
+
 function render() {
-  els.list.innerHTML = "";
-  if (!chats.length) {
-    els.empty.classList.remove("hidden");
+  ui.list.innerHTML = "";
+  if (!videos.length) {
+    ui.list.innerHTML = `<p id="empty-videos" class="empty">No videos yet. Add one to start!</p>`;
     return;
   }
-  els.empty.classList.add("hidden");
 
-  chats.forEach((c) => {
-    const div = document.createElement("div");
-    div.className = "item";
-    div.innerHTML = `
-      <div class="item-title">${c.title ?? "Untitled chat"}</div>
-      <div class="item-url">${c.url}</div>
+  videos.forEach(v => {
+    const card = document.createElement("div");
+    card.className = "video-card";
+    
+    // Only show chat icon if video is ready
+    const showChatIcon = v.status && v.status.toLowerCase() === "ready";
+    const chatIconHtml = showChatIcon 
+      ? `<div class="card-actions">
+           <button class="chat-icon" data-open="${v.id}" title="Open Chat">💬</button>
+         </div>`
+      : '';
+    
+    card.innerHTML = `
+      <div class="meta">
+        <h3>${v.title || "Untitled"}</h3>
+        <a href="${v.url}" target="_blank" rel="noreferrer">${v.url}</a>
+        <div class="row">
+          ${statusPill(v.status)}
+          ${chatIconHtml}
+        </div>
+      </div>
     `;
-    div.addEventListener("click", () => openChatPage(c));
-    els.list.appendChild(div);
+    ui.list.appendChild(card);
   });
 }
 
-els.create.addEventListener("click", async () => {
-  const url = els.url.value.trim();
-  if (!url) return;
+function renderChats() {
+  ui.chatList.innerHTML = "";
+  if (!chats.length) {
+    ui.chatList.innerHTML = `<p id="empty-chats" class="empty">No chats yet. Create a video first!</p>`;
+    return;
+  }
 
-  // loading state
-  els.create.disabled = true;
-  const originalText = els.create.textContent;
-  els.create.textContent = "Creating…";
+  chats.forEach(chat => {
+    const card = document.createElement("div");
+    card.className = "video-card"; // Reuse video card styling
+    card.innerHTML = `
+      <div class="meta">
+        <h3>${chat.title || "Untitled Chat"}</h3>
+        <div class="row">
+          <span class="created-at">${chat.created_at}</span>
+          <div class="card-actions">
+            <button class="chat-icon" data-chat-id="${chat.id}" title="Open Chat">💬</button>
+          </div>
+        </div>
+      </div>
+    `;
+    ui.chatList.appendChild(card);
+  });
+}
 
+async function boot() {
   try {
-    const video = await create_new_video({ url });
-    const chat = {
-      id: video.id,
-      title: video.title,
-      url,
-      videoId: video.id, // Pass videoId for status tracking
-    };
-    chats.push(chat);
-    els.url.value = "";
+    ui.empty && (ui.empty.textContent = "Loading…");
+    
+    // Load both videos and chats
+    const [videosData, chatsData] = await Promise.all([
+      get_all_videos(),
+      get_all_chats()
+    ]);
+    
+    videos = videosData;
+    chats = chatsData;
+    
     render();
-    openChatPage(chat);
-  } catch (e) {
-    console.error(e);
-    alert("Failed to create video.");
+    renderChats();
+  } catch (err) {
+    console.error(err);
+    ui.list.innerHTML = `<p id="empty-videos" class="empty">Failed to load videos.</p>`;
+    showAlert("Could not load data", "error");
+  }
+}
+
+// Store active polling intervals
+let pollingIntervals = new Map();
+
+async function onAdd() {
+  const url = ui.url.value.trim();
+  if (!url) return;
+  ui.add.disabled = true;
+  console.log("Adding video:", url);
+  
+  // Show loading state
+  const originalText = ui.add.textContent;
+  ui.add.textContent = "Processing...";
+  
+  try {
+    const created = await add_new_video(url);  
+    
+    // Map the API response to match our expected structure
+    const newVideo = {
+      id: created.id,
+      title: created.title || "Untitled",
+      url: url,
+      status: "received"
+    };
+    
+    videos.unshift(newVideo);
+    ui.url.value = "";
+    render();
+    showAlert("Video added - processing...", "info");
+    
+    // Start polling for status updates
+    startStatusPolling(created.id);
+  } catch (err) {
+    console.error(err);
+    showAlert("Failed to add video", "error");
   } finally {
-    els.create.disabled = false;
-    els.create.textContent = originalText;
+    ui.add.disabled = false;
+    ui.add.textContent = originalText;
+  }
+}
+
+async function startStatusPolling(videoId) {
+  // Clear any existing polling for this video
+  if (pollingIntervals.has(videoId)) {
+    clearInterval(pollingIntervals.get(videoId));
+  }
+  
+  const pollInterval = setInterval(async () => {
+    try {
+      const statusResponse = await check_video_status({ videoId });
+      
+      // Find and update the video in our array
+      const videoIndex = videos.findIndex(v => v.id === videoId);
+      if (videoIndex !== -1) {
+        videos[videoIndex].status = statusResponse.status;
+        render(); // Re-render to show updated status
+        
+        // If video is ready or failed, stop polling
+        if (statusResponse.status === "ready" || statusResponse.status === "failed") {
+          clearInterval(pollInterval);
+          pollingIntervals.delete(videoId);
+
+          if (statusResponse.status === "ready") {
+            showAlert("Video processing complete!", "success");
+          } else {
+            showAlert("Video processing failed", "error");
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Status polling error:", err);
+      // Don't stop polling on single error, server might be temporarily unavailable
+    }
+  }, 10000); // Poll every 10 seconds
+  
+  pollingIntervals.set(videoId, pollInterval);
+}
+
+document.addEventListener("click", (e) => {
+  const videoId = e.target?.dataset?.open;
+  const chatId = e.target?.dataset?.chatId;
+  
+  if (videoId) {
+    // Create new chat for video
+    const url = new URL("../chat/chat.html", location.href);
+    url.searchParams.set("videoId", videoId);
+    location.href = url.toString();
+  } else if (chatId) {
+    // Open existing chat
+    const url = new URL("../chat/chat.html", location.href);
+    url.searchParams.set("chatId", chatId);
+    location.href = url.toString();
   }
 });
 
-// ---------- navigation to chat page ----------
-function openChatPage(chat) {
-  const params = new URLSearchParams({
-    id: String(chat.id),
-    title: chat.title ?? "",
-    url: chat.url ?? "",
-    videoId: chat.videoId, // Include videoId in URL parameters
+// Tab switching logic
+ui.tabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    // Remove active class from all tabs and pages
+    ui.tabs.forEach((t) => t.classList.remove("active"));
+    ui.pages.forEach((p) => p.classList.remove("active"));
+
+    // Add active class to the clicked tab and corresponding page
+    tab.classList.add("active");
+    const targetPage = document.getElementById(tab.dataset.tab);
+    targetPage.classList.add("active");
   });
+});
 
-  const chatUrl = chrome.runtime.getURL("pages/chat/chat.html") + "?" + params.toString();
-  window.location.href = chatUrl;
-}
+ui.add.addEventListener("click", onAdd);
+ui.url.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") onAdd();
+});
 
-// Load chats from backend on boot
-async function boot() {
-  try {
-    chats = await get_all_chats();
-    render();
-  } catch (e) {
-    console.error(e);
-    els.empty.textContent = "Failed to load chats.";
-    els.empty.classList.remove("hidden");
-  }
-}
-
-// boot
 boot();

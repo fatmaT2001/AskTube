@@ -1,28 +1,45 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>AskTube</title>
-    <link rel="stylesheet" href="index.css" />
-  </head>
-  <body>
-    <header class="hdr">AskTube</header>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AskTube</title>
+  <link rel="stylesheet" href="index.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>AskTube</h1>
+  </header>
 
-    <!-- New chat input -->
-    <section class="new-chat">
-      <input id="yt-url" type="url" placeholder="Paste YouTube URL…" />
-      <button id="create">Create</button>
+  <!-- Tabs Navigation -->
+  <nav class="tabs">
+    <button class="tab active" data-tab="videos">Videos</button>
+    <button class="tab" data-tab="chats">Chats</button>
+  </nav>
+
+  <main>
+    <!-- Videos Tab Content -->
+    <section id="videos" class="tab-page active">
+      <section class="add-video" aria-label="Add YouTube video">
+        <input id="yt-url" type="url" placeholder="Paste YouTube link…" />
+        <button id="add-video">Add</button>
+      </section>
+
+      <section id="alerts" class="alerts" aria-live="polite"></section>
+
+      <section id="video-list" class="video-list">
+        <p id="empty-videos" class="empty">Loading…</p>
+      </section>
     </section>
 
-    <!-- List of chats -->
-    <section class="list-wrap">
-      <h3>Your chats</h3>
-      <div id="list" class="list"></div>
-      <div id="empty" class="empty hidden">No chats yet — paste a link above.</div>
+    <!-- Chats Tab Content -->
+    <section id="chats" class="tab-page hidden">
+      <section id="chat-list" class="chat-list">
+        <p id="empty-chats" class="empty">No chats yet. Create a video first!</p>
+      </section>
     </section>
+  </main>
 
-    <footer class="footer">Powered by me</footer>
-
-    <script type="module" src="index.js"></script>
-  </body>
+  <script type="module" src="index.js"></script>
+</body>
 </html>

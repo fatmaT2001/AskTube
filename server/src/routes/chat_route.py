@@ -22,7 +22,7 @@ async def get_all_chats(request:Request):
     try:
         chats=await chat_model.get_all_chats()
         print(f"Retrieved {len(chats)} chats from the database.")
-        chats_list=[{"chat_id":chat.id,"chat_title":chat.title} for chat in chats]
+        chats_list=[{"chat_id":chat.id,"chat_title":chat.title,"created_at":str(chat.created_at)} for chat in chats]
         return JSONResponse(content={"chats":chats_list})
     except Exception as e:
         return {"error": f"Error getting chats from database: {e}"}

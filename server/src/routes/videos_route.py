@@ -5,6 +5,7 @@ from src.controllers import NLPController, VideoController
 from src.models.enums.video_enum import VideoStatusEnum
 from src.models.db_models import VideoModel
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from src.utils.settings import get_settings
 from src.stores import VectorDBInterface
 from src.stores import GenerationInterface
@@ -152,3 +153,22 @@ async def check_video_status(request:Request,video_id:str):
         return JSONResponse(content={"video_id":video_id,"status":video_status})
     except Exception as e:
         return {"error": f"Error getting video from database: {e}"}
+
+
+@router.get("/videos")
+async def get_all_videos(request:Request):
+    """
+    get all videos
+    """
+    db_client = request.app.state.db_client
+    video_model=VideoModel(db_client)
+    try:
+        videos=await video_model.get_all_user_videos()
+        videos_list=[]
+        for video in videos:
+            video_data={"video_id":video.id,"video_title":video.youtube_title,"video_url":video.youtube_url,"video_status":video.vector_status,"is_transcript_available":bool(video.is_transcript_available),"created_at":str(video.created_at)}
+            videos_list.append(video_data)
+        return JSONResponse(content={"videos":videos_list})
+    except Exception as e:
+        return {"error": f"Error getting videos from database: {e}"}
+    

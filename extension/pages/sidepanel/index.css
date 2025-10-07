@@ -1,124 +1,413 @@
-/* YouTube-dark inspired, with rounded controls like your sample */
-:root{
-  --bg:#0f0f0f;
-  --panel:#181818;
-  --panel-2:#202020;
-  --border:#2a2a2a;
-  --text:#f1f1f1;
-  --muted:#a7a7a7;
-  --brand:#ff0033; /* close to YouTube red */
-  --brand-hover:#cc002a;
-  --radius:10px;
+/* ==================== Root Variables ==================== */
+:root {
+  --bg: linear-gradient(135deg, #2f3349 0%, #1e1e2e 50%, #16161a 100%);
+  --panel: rgba(255, 255, 255, 0.08);
+  --panel-hover: rgba(255, 255, 255, 0.12);
+  --text: #e4e4e7;
+  --muted: #a1a1aa;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --err: #ef4444;
+  --radius: 16px;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --border: rgba(255, 255, 255, 0.1);
+  --backdrop-blur: blur(20px);
 }
 
-*{ box-sizing:border-box; }
-html, body{ margin:0; padding:0; }
-body{
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background: linear-gradient(180deg, var(--bg), #121212);
+/* ==================== Global Styles ==================== */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg);
   color: var(--text);
-  padding: 16px;
-  max-width: 420px; /* similar to your sample’s capped width */
+  min-height: 100vh;
 }
 
-.hdr{
-  font-weight: 700;
-  font-size: 16px;
-  margin-bottom: 12px;
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px;
+  max-width: 420px;
+  margin: auto;
+  background: var(--bg);
+}
+
+/* ==================== Header ==================== */
+.topbar {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 20px;
   text-align: center;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+  backdrop-filter: var(--backdrop-blur);
 }
 
-h3{
-  margin: 14px 0 8px;
-  font-size: 13px;
-  color: var(--muted);
-  letter-spacing: .2px;
+.topbar h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--accent);
+  letter-spacing: 0.5px;
 }
 
-.new-chat{
-  display:flex;
-  gap:8px;
-  margin-bottom: 12px;
+/* ==================== Tabs ==================== */
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
 }
 
-input[type="url"]{
-  flex:1;
-  padding: 10px 12px;
+.tab {
+  padding: 12px 24px;
+  cursor: pointer;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  color: var(--text);
-  outline: none;
-}
-input[type="url"]::placeholder{ color:#8a8a8a; }
-input[type="url"]:focus{
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(255,0,51,.15);
+  color: var(--muted);
+  font-weight: 500;
+  transition: all 0.3s ease;
+  backdrop-filter: var(--backdrop-blur);
 }
 
-button{
-  padding: 10px 14px;
-  background: var(--brand);
+.tab.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+.tab:hover:not(.active) {
+  background: var(--panel-hover);
+  color: var(--text);
+}
+
+/* ==================== Tab Pages ==================== */
+.tab-page {
+  display: none;
+}
+
+.tab-page.active {
+  display: block;
+}
+
+.hidden {
+  display: none;
+}
+
+/* ==================== Input Section ==================== */
+.add-video {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.add-video input {
+  flex: 1;
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  outline: none;
+  transition: all 0.3s ease;
+  backdrop-filter: var(--backdrop-blur);
+  font-size: 0.95rem;
+}
+
+.add-video input::placeholder {
+  color: var(--muted);
+  font-weight: 300;
+}
+
+.add-video input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: var(--panel-hover);
+}
+
+.add-video button {
+  padding: 14px 20px;
+  background: var(--accent);
   border: none;
   color: white;
   border-radius: var(--radius);
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  backdrop-filter: var(--backdrop-blur);
+  font-size: 0.95rem;
 }
-button:hover{ background: var(--brand-hover); }
 
-.list-wrap{
+.add-video button:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.add-video button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ==================== Alerts ==================== */
+.alerts {
+  margin-bottom: 12px;
+}
+
+.alert {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 10px;
+  padding: 14px 18px;
+  color: var(--text);
+  font-size: 0.9rem;
+  backdrop-filter: var(--backdrop-blur);
+  transition: all 0.3s ease;
 }
 
-.list{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
+.alert.err {
+  background: rgba(245, 101, 101, 0.1);
+  border-color: rgba(245, 101, 101, 0.3);
+  color: var(--err);
 }
 
-.item{
-  background: var(--panel-2);
+.alert.success {
+  background: rgba(72, 187, 120, 0.1);
+  border-color: rgba(72, 187, 120, 0.3);
+  color: var(--ok);
+}
+
+.alert.info {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: var(--accent);
+}
+
+/* ==================== Video List ==================== */
+.video-list,
+.chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+  padding: 32px 20px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  backdrop-filter: var(--backdrop-blur);
+  font-weight: 300;
+}
+
+.video-card {
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 10px;
+  padding: 20px;
+  transition: all 0.3s ease;
+  backdrop-filter: var(--backdrop-blur);
+  position: relative;
+  overflow: hidden;
 }
-.item-title{
-  font-size: 14px;
-  font-weight: 600;
-  margin: 0 0 4px 0;
+
+.video-card:hover {
+  background: var(--panel-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.video-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.video-card:hover::before {
+  opacity: 1;
+}
+
+.meta h3 {
+  margin: 0 0 10px 0;
+  font-size: 1.05rem;
   color: var(--text);
-  word-break: break-word;
+  line-height: 1.4;
+  font-weight: 500;
 }
-.item-url{
-  font-size: 12px;
-  color: var(--muted);
+
+.meta a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.85rem;
+  display: block;
+  margin-bottom: 12px;
   word-break: break-all;
+  font-weight: 400;
+  opacity: 0.8;
 }
 
-.empty{ 
-  font-size: 13px; 
+.meta a:hover {
+  text-decoration: underline;
+  opacity: 1;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ==================== Pills ==================== */
+.pill {
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  border-radius: 25px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  backdrop-filter: var(--backdrop-blur);
+  transition: all 0.3s ease;
+}
+
+.pill.ok {
+  color: var(--ok);
+  background: rgba(72, 187, 120, 0.15);
+  border: 1px solid rgba(72, 187, 120, 0.3);
+}
+
+.pill.wait {
+  color: var(--warn);
+  background: rgba(237, 137, 54, 0.15);
+  border: 1px solid rgba(237, 137, 54, 0.3);
+}
+
+.pill.err {
+  color: var(--err);
+  background: rgba(245, 101, 101, 0.15);
+  border: 1px solid rgba(245, 101, 101, 0.3);
+}
+
+.pill.processing {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ==================== Timestamp Styling ==================== */
+.created-at {
+  font-size: 0.8rem;
   color: var(--muted);
-  text-align: center;
-  padding: 8px 0;
+  font-weight: 400;
+  opacity: 0.8;
+  letter-spacing: 0.3px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: var(--backdrop-blur);
+  transition: all 0.3s ease;
 }
-.hidden{ display:none; }
 
-.footer{
-  text-align:center;
-  color: var(--muted);
-  font-size: 12px;
-  margin-top: 10px;
+.created-at:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text);
 }
 
-#create:disabled {
+/* ==================== Hover Actions ==================== */
+.card-actions {
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.video-card:hover .card-actions {
+  opacity: 1;
+}
+
+.chat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  backdrop-filter: var(--backdrop-blur);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.chat-icon:hover {
+  background: var(--accent-hover);
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+/* ==================== Old Button Styles (kept for compatibility) ==================== */
+.btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  backdrop-filter: var(--backdrop-blur);
+}
+
+.btn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn.primary {
+  background: var(--accent);
+}
+
+.btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-/* Make chat items clickable */
-.item {
-  cursor: pointer;
+  transform: none;
 }

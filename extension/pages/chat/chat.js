@@ -1,11 +1,14 @@
-import {send_message_to_chat, get_chat_messages, get_video_status} from "../../api/client.js";
+import {send_message_to_chat, get_chat_messages, check_video_status, create_new_chat, get_all_videos} from "../../api/client.js";
 
-// ---- read params (title, url, id, videoId) ----
+// ---- read params ----
 const p = new URLSearchParams(location.search);
-const chatTitle = p.get("title") || "Chat";
-const chatUrl = p.get("url") || "";
-const chatId = p.get("id") || null;
-const videoId = p.get("videoId") || null;
+console.log(p);
+
+// Parameters can be either:
+// 1. videoId (for creating new chat from video)
+// 2. chatId (for opening existing chat)
+const paramVideoId = p.get("videoId");
+const paramChatId = p.get("chatId");
 
 // ---- DOM ----
 const backBtn = document.getElementById("back-btn");
@@ -15,15 +18,15 @@ const wrap = document.getElementById("chat-wrap");
 const content = document.getElementById("chat-content");
 const input = document.getElementById("msg-input");
 const sendBtn = document.getElementById("send-btn");
-const statusEl = document.getElementById("video-status"); // New status element
-
-// ---- init header ----
-titleEl.textContent = chatTitle;
-subEl.textContent = chatUrl;
+const statusEl = document.getElementById("video-status");
 
 // ---- state ----
 let messages = [];
 let videoReady = false;
+let chatId = null;
+let videoId = null;
+let chatTitle = "Chat";
+let videoUrl = "";
 
 // ---- helpers ----
 function scrollToBottom() {
@@ -64,23 +67,27 @@ function render() {
 async function checkVideoStatus() {
   if (!videoId) return;
   try {
-    const status_data = await get_video_status(videoId);
+    const status_data = await check_video_status({ videoId });
     console.log("Video status:", status_data);
     statusEl.textContent = `Video Status: ${status_data.status}`;
     if (status_data.status === "READY") {
       videoReady = true;
       input.disabled = false;
       sendBtn.disabled = false;
+      statusEl.style.color = "var(--ok)";
     } else if (status_data.status === "FAILED") {
       statusEl.textContent = "Video processing failed. Please try again.";
+      statusEl.style.color = "var(--err)";
       input.disabled = true;
       sendBtn.disabled = true;
     } else {
+      statusEl.style.color = "var(--warn)";
       setTimeout(checkVideoStatus, 5000); // Poll every 5 seconds
     }
   } catch (e) {
     console.error("Failed to fetch video status:", e);
     statusEl.textContent = "Error fetching video status.";
+    statusEl.style.color = "var(--err)";
   }
 }
 
@@ -139,19 +146,87 @@ backBtn.addEventListener("click", () => {
   window.location.href = panelUrl;
 });
 
-async function boot() {
-  if (!chatId) return;
-  content.innerHTML = `<div class="loading">Loading messages…</div>`;
+// ---- initialization functions ----
+async function initializeFromVideo(videoId) {
   try {
-    messages = await get_chat_messages(chatId);
-    render();
+    // Create new chat for this video
+    const newChat = await create_new_chat({ videoId });
+    
+    // Set global state
+    chatId = newChat.id;
+    chatTitle = newChat.title;
+    
+    // Update UI
+    titleEl.textContent = chatTitle;
+    subEl.textContent = `Video ID: ${videoId}`; // We can show video ID or get video details separately if needed
+    
+    return { videoId, chat: newChat };
   } catch (e) {
-    content.innerHTML = `<div class="error">Failed to load messages.</div>`;
-    console.error("Failed to load messages:", e);
+    console.error("Failed to initialize from video:", e);
+    content.innerHTML = `<div class="error">Failed to create chat: ${e.message}</div>`;
+    throw e;
   }
+}
 
-  // Check video status
-  checkVideoStatus();
+async function initializeFromChat(chatId) {
+  try {
+    // Get chat messages first to validate chat exists
+    const chatMessages = await get_chat_messages(chatId);
+    
+    // For now, we'll use the chat ID as title since backend doesn't provide chat details with video association
+    chatTitle = `Chat ${chatId}`;
+    
+    // Update UI
+    titleEl.textContent = chatTitle;
+    subEl.textContent = `Chat ID: ${chatId}`;
+    
+    return { messages: chatMessages };
+  } catch (e) {
+    console.error("Failed to initialize from chat:", e);
+    content.innerHTML = `<div class="error">Failed to load chat: ${e.message}</div>`;
+    throw e;
+  }
+}
+
+async function boot() {
+  content.innerHTML = `<div class="loading">Initializing chat…</div>`;
+  
+  try {
+    if (paramVideoId) {
+      // Scenario 1: Creating new chat from video
+      const { videoId: vId } = await initializeFromVideo(paramVideoId);
+      videoId = vId;
+      messages = []; // New chat, no messages yet
+      
+    } else if (paramChatId) {
+      // Scenario 2: Opening existing chat
+      chatId = paramChatId;
+      const { messages: chatMessages } = await initializeFromChat(paramChatId);
+      messages = chatMessages || [];
+      
+    } else {
+      throw new Error("No chat ID or video ID provided");
+    }
+    
+    // Render messages
+    render();
+    
+    // Check video status if we have a video
+    if (videoId) {
+      checkVideoStatus();
+    } else {
+      // If no video, enable chat immediately
+      videoReady = true;
+      input.disabled = false;
+      sendBtn.disabled = false;
+      statusEl.textContent = "Ready";
+      statusEl.style.color = "var(--ok)";
+    }
+    
+  } catch (e) {
+    console.error("Failed to initialize chat:", e);
+    content.innerHTML = `<div class="error">Failed to initialize chat: ${e.message}</div>`;
+  }
 }
 
 // ---- boot ----
