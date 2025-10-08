@@ -70,12 +70,12 @@ async function checkVideoStatus() {
     const status_data = await check_video_status({ videoId });
     console.log("Video status:", status_data);
     statusEl.textContent = `Video Status: ${status_data.status}`;
-    if (status_data.status === "READY") {
+    if (status_data.status === "ready") {
       videoReady = true;
       input.disabled = false;
       sendBtn.disabled = false;
       statusEl.style.color = "var(--ok)";
-    } else if (status_data.status === "FAILED") {
+    } else if (status_data.status === "failed") {
       statusEl.textContent = "Video processing failed. Please try again.";
       statusEl.style.color = "var(--err)";
       input.disabled = true;
@@ -172,15 +172,12 @@ async function initializeFromChat(chatId) {
   try {
     // Get chat messages first to validate chat exists
     const chatMessages = await get_chat_messages(chatId);
-    
-    // For now, we'll use the chat ID as title since backend doesn't provide chat details with video association
-    chatTitle = `Chat ${chatId}`;
-    
+        
     // Update UI
-    titleEl.textContent = chatTitle;
-    subEl.textContent = `Chat ID: ${chatId}`;
+    titleEl.textContent = chatMessages.title;
+    subEl.textContent = `Chat ID: ${chatMessages.id}`;
     
-    return { messages: chatMessages };
+    return { messages: chatMessages.messages};
   } catch (e) {
     console.error("Failed to initialize from chat:", e);
     content.innerHTML = `<div class="error">Failed to load chat: ${e.message}</div>`;

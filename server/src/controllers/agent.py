@@ -24,43 +24,54 @@ class AgMPentController:
         ]
         return preprocessed_results
     
-    async def get_model_answer(self, user_query: str,history:list=[],summary:str='') -> str:
+
+
+    async def get_model_answer(self, user_query: str, history: list = None, summary: str = '') -> str:
         """Generate an answer based on the user query and relevant chunks."""
+        if history is None:
+            history = []
+        
         # Construct the message for the generation model
         user_prompt = CHAT_USER_PROMPT.format(user_query=user_query, history=history)
-        system_prompt = CHAT_SYSTEM_PROMPT.replace("{video_summary}", summary)
-       
+        system_prompt = CHAT_SYSTEM_PROMPT.format(video_summary=summary)
+    
         message = [
             {"role": "system", "content": system_prompt},
-            
             {"role": "user", "content": user_prompt}
         ]
 
-        calls=0
+        calls = 0
         while calls < self.MAX_CALLS:
-            calls+=1
+            calls += 1
             answer = await self.generation.generate_answer(message=message)
-            print(answer)
+            
             # check if the answer is a function call
             if getattr(answer, "function_call", None):
-                print(" we are calling the tool")
                 args = self.generation.get_tool_agrs(answer)
-                print(f"Tool args: {args}")
-                print(f"args type is : {type(args)}")
+                
                 if args:
-                    tool_response = await self.get_relevant_chunks(user_query=args.get("user_query", user_query), top_k=args.get("top_k", 3))
+                    tool_response = await self.get_relevant_chunks(
+                        user_query=args.get("user_query", user_query), 
+                        top_k=args.get("top_k", 3)
+                    )
                     print(tool_response)
-                    # Now, build a new message including the tool response
+                    
+                    # Build a new message including the tool response
                     tool_message = {
                         "role": "function",
                         "name": "get_relevant_chunks",
                         "content": str(tool_response)
                     }
                     message.append(tool_message)
+                    # Continue the loop to get the final answer
+                else:
+                    # If args is None/empty, break to avoid infinite loop
+                    break
             else:
+                # Got a regular response, return it
                 return answer.content
-        return answer
-
-    
+        
+        # If we've exhausted MAX_CALLS, return the last answer content
+        return getattr(answer, 'content', 'Unable to generate response after maximum attempts')
 
 

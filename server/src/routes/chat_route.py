@@ -150,7 +150,7 @@ async def get_chat_history(request:Request,chat_id:int):
     try:
         messages=await message_model.get_chat_history(chat_id=chat_id)
         messages_list=[{"message_id":message.id,"role":message.role,"content":message.content,"created_at":str(message.created_at)} for message in messages]
-        return JSONResponse(content={"chat_id":chat_id,"messages":messages_list})
+        return JSONResponse(content={"chat_id":chat_id,"chat_title":chat_data.title,"messages":messages_list})
     except Exception as e:
         return {"error": f"Error getting messages from database: {e}"}
 

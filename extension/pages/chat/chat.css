@@ -1,12 +1,13 @@
 /* ==================== Root Variables ==================== */
 :root {
-  --bg: linear-gradient(135deg, #2f3349 0%, #1e1e2e 50%, #16161a 100%);
+  --bg: linear-gradient(135deg, #000000 0%, #0b0b0b 50%, #151516 100%);
+  --accent-hover: #d92a4c;
+  --accent: #d92a4c;
+
   --panel: rgba(255, 255, 255, 0.08);
   --panel-hover: rgba(255, 255, 255, 0.12);
   --text: #e4e4e7;
   --muted: #a1a1aa;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
   --ok: #22c55e;
   --warn: #f59e0b;
   --err: #ef4444;

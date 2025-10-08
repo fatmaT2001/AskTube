@@ -130,6 +130,7 @@ const response = await fetch(`${backend_url}/chats`, {
 
 
 export async function send_message_to_chat(chatId, message) {
+  
   const response = await fetch(`${backend_url}/chats/${chatId}/messages`, {
     method: 'POST',
     headers: {
@@ -169,11 +170,18 @@ export async function get_chat_messages(chatId) {
 
   const data = await response.json();
   console.log("Created chat:", data);
-    return (data.messages || []).map(msg => ({
-    role: msg.role,
-    content: msg.content,
-    ts: msg.created_at
-  }));
+  const chat_data={
+    "id":data.chat_id,
+    "title":data.chat_title,
+    "messages":data.messages.map(msg=>({
+      "role":msg.role,
+      "content":msg.content,
+      "ts":msg.created_at
+    }))
+  }
+  return chat_data
+
+
 
 }
 
