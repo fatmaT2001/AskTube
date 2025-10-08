@@ -19,16 +19,10 @@ AskTube transforms YouTube videos into interactive learning experiences through 
 ## Screenshots
 
 ### Chrome Extension Interface
-![Chrome Extension](screenshots/chrome-extension.png)
-*YouTube integration with AskTube sidepanel*
+<img width="250" height="814" alt="image" src="https://github.com/user-attachments/assets/2ca4618e-1c8b-4405-a6c3-583359d7151f" />
+<img width="250" height="814" alt="image" src="https://github.com/user-attachments/assets/607998b2-3ae6-4e09-9fb7-fde579a6e81b" />
+<img width="250" height="814" alt="image" src="https://github.com/user-attachments/assets/016b3263-e547-4e98-9e7f-9e95038c81af" />
 
-### Chat Interface
-![Chat Interface](screenshots/chat-interface.png)
-*Real-time conversation with video content*
-
-### Video Management
-![Video Management](screenshots/video-management.png)
-*Manage and track video processing status*
 
 ## Architecture
 
