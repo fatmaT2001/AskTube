@@ -52,18 +52,28 @@ class AgMPentController:
                 args = self.generation.get_tool_agrs(answer)
                 
                 if args:
+                    # First, add the assistant's message with the function call
+                    assistant_message = {
+                        "role": "assistant",
+                        "content": None,
+                        "function_call": answer.function_call
+                    }
+                    print("Assistant message with function call:", assistant_message)
+                    message.append(assistant_message)
+                    
+                    # Then get the tool response
                     tool_response = await self.get_relevant_chunks(
                         user_query=args.get("user_query", user_query), 
                         top_k=args.get("top_k", 3)
                     )
-                    print(f"Tool response: {tool_response}")
                     
-                    # Build a new message including the tool response
+                    # Finally, add the function response message
                     tool_message = {
                         "role": "function",
                         "name": "get_relevant_chunks",
                         "content": str(tool_response)
                     }
+                    print("Tool response message:", tool_message)
                     message.append(tool_message)
                     # Continue the loop to get the final answer
                 else:

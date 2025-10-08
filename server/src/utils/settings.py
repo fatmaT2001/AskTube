@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     LITELLM_BASE_URL: str
     LITELLM_BASE_MODEL:str
     LITELLM_MAP_REDUCE_MODEL:str
+    OPEN_ROUTER_API_KEY:str
 
 
     # Other settings

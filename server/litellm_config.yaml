@@ -4,11 +4,6 @@ router_settings:
 model_list:
   - model_name: "map_reduce_models"
     litellm_params:
-      model: "groq/meta-llama/llama-4-scout-17b-16e-instruct"
-      api_key: "os.environ/GROQ_API_KEY"
-
-  - model_name: "map_reduce_models"
-    litellm_params:
       model: "groq/meta-llama/llama-4-maverick-17b-128e-instruct"
       api_key: "os.environ/GROQ_API_KEY"
 
@@ -16,6 +11,12 @@ model_list:
     litellm_params:
       model: "groq/llama-3.1-8b-instant"
       api_key: "os.environ/GROQ_API_KEY"
+
+  - model_name: "map_reduce_models"
+    litellm_params:
+      model: "openrouter/qwen/qwen3-vl-235b-a22b-instruct"
+      api_key: "os.environ/OPEN_ROUTER_API_KEY"
+      
 
 
 
@@ -31,7 +32,7 @@ model_list:
 
 litellm_settings:
   num_retries: 5
-  fallbacks: [{"answer_generation_models": "map_reduce_models"}, {"map_reduce_models": "answer_generation_models"}]
+  fallbacks: [{"answer_generation_models": "map_reduce_models"}]
   request_timeout: 10
   allowed_fails: 3 
   cooldown_time: 60

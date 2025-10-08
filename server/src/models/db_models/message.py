@@ -26,7 +26,7 @@ class MessageModel(BaseModel):
 
     async def get_chat_history(self,chat_id)->list[message_scheme]:
         async with self.db_clint() as session:
-            result = await session.execute(sql_text(f"SELECT * FROM {self.table_name} where chat_id=:chat_id").bindparams(chat_id=chat_id))
+            result = await session.execute(sql_text(f"SELECT * FROM {self.table_name} WHERE chat_id=:chat_id ORDER BY created_at ASC").bindparams(chat_id=chat_id))
             chats = result.mappings().fetchall()
 
         return [message_scheme(**row) for row in chats]

@@ -202,21 +202,30 @@ async function deleteVideo(videoId) {
     return;
   }
   
-  console.log("Deleting video ID:", videoId);
+  console.log("Deleting video ID:", videoId, "Type:", typeof videoId);
   console.log("Videos before deletion:", videos.length);
+  console.log("Video IDs in array:", videos.map(v => ({id: v.id, type: typeof v.id})));
   
   try {
     await delete_video(videoId);
     
-    // Remove from local array
+    // Convert videoId to number to ensure type matching
+    const numericVideoId = parseInt(videoId, 10);
+    console.log("Converted video ID:", numericVideoId, "Type:", typeof numericVideoId);
+    
+    // Remove from local array using both string and numeric comparison
     const originalLength = videos.length;
-    videos = videos.filter(v => v.id !== videoId);
+    videos = videos.filter(v => v.id != videoId && v.id !== numericVideoId);
     console.log("Videos after deletion:", videos.length, "Removed:", originalLength - videos.length);
     
-    // Clear any polling for this video
+    // Clear any polling for this video (check both types)
     if (pollingIntervals.has(videoId)) {
       clearInterval(pollingIntervals.get(videoId));
       pollingIntervals.delete(videoId);
+    }
+    if (pollingIntervals.has(numericVideoId)) {
+      clearInterval(pollingIntervals.get(numericVideoId));
+      pollingIntervals.delete(numericVideoId);
     }
     
     // Force re-render
@@ -234,13 +243,24 @@ async function deleteChatHandler(chatId) {
     return;
   }
   
+  console.log("Deleting chat ID:", chatId, "Type:", typeof chatId);
+  console.log("Chats before deletion:", chats.length);
+  console.log("Chat IDs in array:", chats.map(c => ({id: c.id, type: typeof c.id})));
+  
   try {
     await delete_chat(chatId);
     
-    // Remove from local array
-    chats = chats.filter(c => c.id !== chatId);
+    // Convert chatId to number to ensure type matching
+    const numericChatId = parseInt(chatId, 10);
+    console.log("Converted chat ID:", numericChatId, "Type:", typeof numericChatId);
+    
+    // Remove from local array using both string and numeric comparison
+    const originalLength = chats.length;
+    chats = chats.filter(c => c.id != chatId && c.id !== numericChatId);
+    console.log("Chats after deletion:", chats.length, "Removed:", originalLength - chats.length);
     
     renderChats();
+    console.log("renderChats called, chat list should be updated");
     showAlert("Chat deleted successfully", "success");
   } catch (err) {
     console.error("Delete chat error:", err);

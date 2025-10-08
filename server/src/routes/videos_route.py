@@ -23,69 +23,153 @@ async def process_video_task(fastapi_request:Request,video_id:str,youtube_video_
     3. create embeddings and save to vector db
     4. create video entry in the database
     """
-    db_client = fastapi_request.app.state.db_client
-    db_vector:VectorDBInterface= fastapi_request.app.state.vector_db 
-    video_model=VideoModel(db_client)
-    nlp_controller = NLPController()
-    generation_tool:GenerationInterface= fastapi_request.app.state.generation_model
+    import traceback
+    import asyncio
+    
+    print(f"🚀 Starting video processing task for video ID: {video_id}")
+    print(f"📊 Task parameters: youtube_video_id={youtube_video_id}, video_title={video_title}, is_transcript_available={is_transcript_availabe}")
+    
+    try:
+        db_client = fastapi_request.app.state.db_client
+        db_vector:VectorDBInterface= fastapi_request.app.state.vector_db 
+        video_model=VideoModel(db_client)
+        nlp_controller = NLPController()
+        generation_tool:GenerationInterface= fastapi_request.app.state.generation_model
+        print(f"Initialized all components for video ID: {video_id}")
+    except Exception as e:
+        print(f"Failed to initialize components for video ID {video_id}: {str(e)}")
+        print(f"Full traceback: {traceback.format_exc()}")
+        return
 
     if is_transcript_availabe and youtube_transcript:
+        print(f"Transcript available for video ID: {video_id}, starting processing pipeline...")
+        
         # step1: preprocess the transcript to generate chunks using chunk duration from settings
+        print(f"Step 1: Preprocessing transcript for video ID: {video_id}")
         try:
-            processed_transcript=nlp_controller.prepare_youtube_transcript_for_embedding(transcript=youtube_transcript,chunk_duration=int(get_settings().CHUNK_DURATION * 60))
-            print(f"Processed transcript into {len(processed_transcript)} chunks for embedding.")
+            chunk_duration = int(get_settings().CHUNK_DURATION * 60)
+            print(f" Using chunk duration: {chunk_duration} seconds")
+            
+            processed_transcript=nlp_controller.prepare_youtube_transcript_for_embedding(
+                transcript=youtube_transcript,
+                chunk_duration=chunk_duration
+            )
+            print(f" Step 1 completed: Processed transcript into {len(processed_transcript)} chunks for embedding.")
         except Exception as e:
-            print(f"Error preprocessing transcript: {e}")
-            await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+            print(f" Step 1 failed - Error preprocessing transcript for video ID {video_id}: {str(e)}")
+            print(f"Full traceback: {traceback.format_exc()}")
+            try:
+                await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+                print(f"Updated video status to FAILED for video ID: {video_id}")
+            except Exception as status_error:
+                print(f"Failed to update video status: {status_error}")
             return 
 
         # step2: generate video summary using the generation model
+        print(f" Step 2: Generating video summary for video ID: {video_id}")
         try:
             if processed_transcript:
                 chunks=[chunk["text"] for chunk in processed_transcript]
-                print(f"number of chunks {len(chunks)}")
-                video_summary= await generation_tool.generate_video_summary(chunks=chunks,video_title=video_title)
-                print(f"Generated video summary.{video_summary}")
+                print(f"Processing {len(chunks)} chunks for summary generation")
+                
+                print(f"Calling generation tool for video summary...")
+                video_summary= await asyncio.wait_for(
+                    generation_tool.generate_video_summary(chunks=chunks,video_title=video_title),
+                    timeout=300  # 5 minute timeout
+                )
+                print(f"Step 2 completed: Generated video summary (length: {len(video_summary)} chars)")
             else:
                 video_summary="No transcript available to generate summary."
+                print(f"No processed transcript, using default summary")
+        except asyncio.TimeoutError:
+            print(f"Step 2 timeout - Video summary generation timed out for video ID: {video_id}")
+            try:
+                await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+                print(f"Updated video status to FAILED due to timeout for video ID: {video_id}")
+            except Exception as status_error:
+                print(f" Failed to update video status: {status_error}")
+            return
         except Exception as e:
-            print(f"Error generating video summary: {e}")
-            await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+            print(f" Step 2 failed - Error generating video summary for video ID {video_id}: {str(e)}")
+            print(f" Full traceback: {traceback.format_exc()}")
+            try:
+                await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+                print(f" Updated video status to FAILED for video ID: {video_id}")
+            except Exception as status_error:
+                print(f" Failed to update video status: {status_error}")
             return 
         
+        print(f" Step 2.5: Saving video summary to database for video ID: {video_id}")
         try:
             await video_model.add_video_summary(video_id=video_id,summary=video_summary)
-            print(f"Video summary updated in database for video ID: {video_id}")
+            print(f" Step 2.5 completed: Video summary updated in database for video ID: {video_id}")
         except Exception as e:
-            print(f"Error updating video summary in database: {e}")
-            await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+            print(f"Step 2.5 failed - Error updating video summary in database for video ID {video_id}: {str(e)}")
+            print(f"Full traceback: {traceback.format_exc()}")
+            try:
+                await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+                print(f" Updated video status to FAILED for video ID: {video_id}")
+            except Exception as status_error:
+                print(f" Failed to update video status: {status_error}")
             return
 
         # step3: create embeddings and save to vector db
+        print(f"Step 3: Creating embeddings and saving to vector DB for video ID: {video_id}")
         try:
             if processed_transcript:
-                await db_vector.index(embedding_ready_data=processed_transcript,video_id=video_id)
-                print(f"Transcript chunks embedded and saved to vector database for video ID: {video_id}")
+                print(f" Indexing {len(processed_transcript)} chunks in vector database...")
+                await asyncio.wait_for(
+                    db_vector.index(embedding_ready_data=processed_transcript,video_id=video_id),
+                    timeout=600  # 10 minute timeout for embedding
+                )
+                print(f" Step 3 completed: Transcript chunks embedded and saved to vector database for video ID: {video_id}")
+            else:
+                print(f" No processed transcript to embed for video ID: {video_id}")
+        except asyncio.TimeoutError:
+            print(f" Step 3 timeout - Vector database indexing timed out for video ID: {video_id}")
+            try:
+                await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+                print(f" Updated video status to FAILED due to timeout for video ID: {video_id}")
+            except Exception as status_error:
+                print(f" Failed to update video status: {status_error}")
+            return
         except Exception as e:
-            print(f"Error saving embeddings to vector database: {e}")
-            await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+            print(f"Step 3 failed - Error saving embeddings to vector database for video ID {video_id}: {str(e)}")
+            print(f"Full traceback: {traceback.format_exc()}")
+            try:
+                await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+                print(f"Updated video status to FAILED for video ID: {video_id}")
+            except Exception as status_error:
+                print(f"Failed to update video status: {status_error}")
             return
         
         # step4: update video status to completed
+        print(f" Step 4: Updating video status to READY for video ID: {video_id}")
         try:
             await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.READY.value)
-            print(f"Video processing completed for video ID: {video_id}")
+            print(f" Step 4 completed: Video processing completed successfully for video ID: {video_id}")
 
         except Exception as e:
-            print(f"Error updating video status to completed: {e}")
-            await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+            print(f" Step 4 failed - Error updating video status to completed for video ID {video_id}: {str(e)}")
+            print(f" Full traceback: {traceback.format_exc()}")
+            try:
+                await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+                print(f" Updated video status to FAILED for video ID: {video_id}")
+            except Exception as status_error:
+                print(f" Failed to update video status: {status_error}")
             return
         
     else:
-        print("No transcript available; skipping processing steps.")
-        await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+        print(f" No transcript available for video ID: {video_id}; skipping processing steps.")
+        print(f" is_transcript_availabe: {is_transcript_availabe}, youtube_transcript length: {len(youtube_transcript) if youtube_transcript else 0}")
+        try:
+            await video_model.update_video_status(video_id=video_id,new_status=VideoStatusEnum.FAILED.value)
+            print(f" Updated video status to FAILED (no transcript) for video ID: {video_id}")
+        except Exception as status_error:
+            print(f" Failed to update video status: {status_error}")
         return
     
+    print(f"Video processing task completed successfully for video ID: {video_id}")
     return
     
 
@@ -122,9 +206,23 @@ async def add_new_video(request:Request,new_video: CreateNewVideoRequest,backgro
 
     # process the video in the background
     try:
-        background_tasks.add_task(process_video_task,fastapi_request=request,video_id=video_created_data.id,youtube_video_id=video_id,is_transcript_availabe=is_transcript_availabe,youtube_transcript=transcript,video_title=video_title)
-        print(f"Background task started for video ID: {video_created_data.id}")
+        print(f"Initiating background task for video ID: {video_created_data.id}")
+        print(f"Task parameters: youtube_video_id={video_id}, title='{video_title}', transcript_available={is_transcript_availabe}, transcript_length={len(transcript) if transcript else 0}")
+        
+        background_tasks.add_task(
+            process_video_task,
+            fastapi_request=request,
+            video_id=video_created_data.id,
+            youtube_video_id=video_id,
+            is_transcript_availabe=is_transcript_availabe,
+            youtube_transcript=transcript,
+            video_title=video_title
+        )
+        print(f"Background task successfully queued for video ID: {video_created_data.id}")
     except Exception as e:
+        print(f" Error starting background task for video ID {video_created_data.id}: {e}")
+        import traceback
+        print(f" Full traceback: {traceback.format_exc()}")
         return {"error": f"Error starting background task: {e}"}
     
     
