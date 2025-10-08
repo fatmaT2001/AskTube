@@ -1,6 +1,11 @@
+# AskTube
+
 > **AI-Powered YouTube Video Learning Assistant**
 
 AskTube transforms YouTube videos into interactive learning experiences through intelligent conversation. Built with enterprise-grade retrieval-augmented generation (RAG), it enables users to ask questions about video content and receive contextually accurate responses powered by state-of-the-art language models.
+
+![AskTube Demo](screenshots/demo.gif)
+*Interactive chat with YouTube video content*
 
 ## Key Features
 
@@ -10,6 +15,20 @@ AskTube transforms YouTube videos into interactive learning experiences through 
 - **Real-time Chat Interface**: Interactive conversations with video content
 - **Persistent Storage**: PostgreSQL-backed data persistence for videos, chats, and message history
 - **Browser Extension**: Chrome extension for seamless YouTube integration
+
+## Screenshots
+
+### Chrome Extension Interface
+![Chrome Extension](screenshots/chrome-extension.png)
+*YouTube integration with AskTube sidepanel*
+
+### Chat Interface
+![Chat Interface](screenshots/chat-interface.png)
+*Real-time conversation with video content*
+
+### Video Management
+![Video Management](screenshots/video-management.png)
+*Manage and track video processing status*
 
 ## Architecture
 
