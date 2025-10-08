@@ -1,11 +1,3 @@
-# AskTube
-
-> **AI-Powered YouTube Video Learning Assistant**
-
-AskTube transforms YouTube videos into interactive learning experiences through intelligent conversation. Built with enterprise-grade retrieval-augmented generation (RAG), it enables users to ask questions about video content and receive contextually accurate responses powered by state-of-the-art language models.
-
-# AskTube
-
 > **AI-Powered YouTube Video Learning Assistant**
 
 AskTube transforms YouTube videos into interactive learning experiences through intelligent conversation. Built with enterprise-grade retrieval-augmented generation (RAG), it enables users to ask questions about video content and receive contextually accurate responses powered by state-of-the-art language models.
