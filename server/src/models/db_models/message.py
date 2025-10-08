@@ -31,3 +31,13 @@ class MessageModel(BaseModel):
 
         return [message_scheme(**row) for row in chats]
     
+
+    async def delete_messages_by_chat_id(self,chat_id:int):
+        async with self.db_clint() as session:
+            async with session.begin():
+                await session.execute(
+                    sql_text(f"DELETE FROM {self.table_name} WHERE chat_id = :chat_id"),
+                    {"chat_id": chat_id}
+                )
+            await session.commit()
+        return True

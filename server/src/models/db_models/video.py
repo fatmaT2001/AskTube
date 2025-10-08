@@ -61,6 +61,17 @@ class VideoModel(BaseModel):
             return video if video else None
         
 
+
+    async def delete_video_by_id(self, video_id: int) -> bool:
+        async with self.db_clint() as session:
+            async with session.begin():
+                result = await session.execute(
+                    sql_text(f"DELETE FROM {self.table_name} WHERE id = :video_id"),
+                    {"video_id": video_id}
+                )
+                await session.commit()
+                return result.rowcount > 0
+
     async def get_all_user_videos(self) -> list[video_scheme]:
         async with self.db_clint() as session:
             result = await session.execute(

@@ -163,10 +163,21 @@ async def delete_chat_by_id(request:Request,chat_id:int):
     """
     db_client = request.app.state.db_client
     chat_model=ChatModel(db_client)
+    message_model=MessageModel(db_client)
     try:
         chat_data=await chat_model.get_chat_by_id(chat_id=chat_id)
         if not chat_data:
             return JSONResponse(content={"error": "Chat not found"},status_code=404)
+    except Exception as e:
+        return {"error": f"Error getting chat from database: {e}"}
+    # delete all messages associated with the chat
+    try:
+        await message_model.delete_messages_by_chat_id(chat_id=chat_id)
+    except Exception as e:
+        return {"error": f"Error deleting messages from database: {e}"}
+    # delete the chat
+    try:    
+    
         await chat_model.delete_chat(chat_id=chat_id)
         return JSONResponse(content={"message": "Chat deleted successfully"})
     except Exception as e:

@@ -25,7 +25,6 @@ class AgMPentController:
         return preprocessed_results
     
 
-
     async def get_model_answer(self, user_query: str, history: list = None, summary: str = '') -> str:
         """Generate an answer based on the user query and relevant chunks."""
         if history is None:
@@ -34,19 +33,22 @@ class AgMPentController:
         # Construct the message for the generation model
         user_prompt = CHAT_USER_PROMPT.format(user_query=user_query, history=history)
         system_prompt = CHAT_SYSTEM_PROMPT.format(video_summary=summary)
-    
+
         message = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ]
 
         calls = 0
+        answer = None
+        
         while calls < self.MAX_CALLS:
             calls += 1
             answer = await self.generation.generate_answer(message=message)
             
             # check if the answer is a function call
             if getattr(answer, "function_call", None):
+                print("Function call detected")
                 args = self.generation.get_tool_agrs(answer)
                 
                 if args:
@@ -54,7 +56,7 @@ class AgMPentController:
                         user_query=args.get("user_query", user_query), 
                         top_k=args.get("top_k", 3)
                     )
-                    print(tool_response)
+                    print(f"Tool response: {tool_response}")
                     
                     # Build a new message including the tool response
                     tool_message = {
@@ -66,12 +68,15 @@ class AgMPentController:
                     # Continue the loop to get the final answer
                 else:
                     # If args is None/empty, break to avoid infinite loop
+                    print("No args found for function call")
                     break
             else:
                 # Got a regular response, return it
+                print("Regular response received")
                 return answer.content
         
-        # If we've exhausted MAX_CALLS, return the last answer content
-        return getattr(answer, 'content', 'Unable to generate response after maximum attempts')
-
-
+        # If we've exhausted MAX_CALLS or broke out of loop
+        if answer and hasattr(answer, 'content'):
+            return answer.content
+        else:
+            return 'Unable to generate a proper response. Please try again.'

@@ -77,6 +77,21 @@ const response = await fetch(`${backend_url}/videos`, {
 }
 
 
+export async function delete_video(videoId) {
+  const response = await fetch(`${backend_url}/videos/${videoId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete video');
+  }
+  const data = await response.json();
+  console.log("Deleted video:", data);
+  return data;
+}
+
 //=====================================================================================
 //========================================Chat APIs====================================
 export async function create_new_chat({ videoId }) {
@@ -185,3 +200,20 @@ export async function get_chat_messages(chatId) {
 
 }
 
+
+export async function delete_chat(chatId) {
+  const response = await fetch(`${backend_url}/chats/${chatId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete chat');
+  }
+  const data = await response.json();
+  console.log("Deleted chat:", data);
+  return data;
+}
+
+//=====================================================================================

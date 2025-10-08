@@ -172,3 +172,16 @@ async def get_all_videos(request:Request):
     except Exception as e:
         return {"error": f"Error getting videos from database: {e}"}
     
+
+@router.delete("/videos/{video_id}")
+async def delete_video_by_id(request:Request,video_id:str):
+    """
+    delete video by id
+    """
+    db_client = request.app.state.db_client
+    video_model=VideoModel(db_client)
+    try:    
+        await video_model.delete_video_by_id(video_id=int(video_id))
+        return JSONResponse(content={"message": "Video deleted successfully"})
+    except Exception as e:
+        return {"error": f"Error deleting video from database: {e}"}

@@ -1,5 +1,5 @@
 // keep your original client.js function names
-import { get_all_videos, add_new_video, check_video_status, get_all_chats } from "../../api/client.js";
+import { get_all_videos, add_new_video, check_video_status, get_all_chats,delete_chat,delete_video } from "../../api/client.js";
 
 const $ = (s) => document.querySelector(s);
 const ui = {
@@ -52,9 +52,7 @@ function render() {
     // Only show chat icon if video is ready
     const showChatIcon = v.status && v.status.toLowerCase() === "ready";
     const chatIconHtml = showChatIcon 
-      ? `<div class="card-actions">
-           <button class="chat-icon" data-open="${v.id}" title="Open Chat">💬</button>
-         </div>`
+      ? `<button class="chat-icon" data-open="${v.id}" title="Open Chat">💬</button>`
       : '';
     
     card.innerHTML = `
@@ -63,7 +61,10 @@ function render() {
         <a href="${v.url}" target="_blank" rel="noreferrer">${v.url}</a>
         <div class="row">
           ${statusPill(v.status)}
-          ${chatIconHtml}
+          <div class="card-actions">
+            ${chatIconHtml}
+            <button class="delete-icon" data-delete-video="${v.id}" title="Delete Video">🗑️</button>
+          </div>
         </div>
       </div>
     `;
@@ -88,6 +89,7 @@ function renderChats() {
           <span class="created-at">${chat.created_at}</span>
           <div class="card-actions">
             <button class="chat-icon" data-chat-id="${chat.id}" title="Open Chat">💬</button>
+            <button class="delete-icon" data-delete-chat="${chat.id}" title="Delete Chat">🗑️</button>
           </div>
         </div>
       </div>
@@ -195,9 +197,62 @@ async function startStatusPolling(videoId) {
   pollingIntervals.set(videoId, pollInterval);
 }
 
+async function deleteVideo(videoId) {
+  if (!confirm("Are you sure you want to delete this video? This action cannot be undone.")) {
+    return;
+  }
+  
+  console.log("Deleting video ID:", videoId);
+  console.log("Videos before deletion:", videos.length);
+  
+  try {
+    await delete_video(videoId);
+    
+    // Remove from local array
+    const originalLength = videos.length;
+    videos = videos.filter(v => v.id !== videoId);
+    console.log("Videos after deletion:", videos.length, "Removed:", originalLength - videos.length);
+    
+    // Clear any polling for this video
+    if (pollingIntervals.has(videoId)) {
+      clearInterval(pollingIntervals.get(videoId));
+      pollingIntervals.delete(videoId);
+    }
+    
+    // Force re-render
+    render();
+    console.log("Render called, list should be updated");
+    showAlert("Video deleted successfully", "success");
+  } catch (err) {
+    console.error("Delete video error:", err);
+    showAlert("Failed to delete video", "error");
+  }
+}
+
+async function deleteChatHandler(chatId) {
+  if (!confirm("Are you sure you want to delete this chat? This action cannot be undone.")) {
+    return;
+  }
+  
+  try {
+    await delete_chat(chatId);
+    
+    // Remove from local array
+    chats = chats.filter(c => c.id !== chatId);
+    
+    renderChats();
+    showAlert("Chat deleted successfully", "success");
+  } catch (err) {
+    console.error("Delete chat error:", err);
+    showAlert("Failed to delete chat", "error");
+  }
+}
+
 document.addEventListener("click", (e) => {
   const videoId = e.target?.dataset?.open;
   const chatId = e.target?.dataset?.chatId;
+  const deleteVideoId = e.target?.dataset?.deleteVideo;
+  const deleteChatId = e.target?.dataset?.deleteChat;
   
   if (videoId) {
     // Create new chat for video
@@ -209,6 +264,12 @@ document.addEventListener("click", (e) => {
     const url = new URL("../chat/chat.html", location.href);
     url.searchParams.set("chatId", chatId);
     location.href = url.toString();
+  } else if (deleteVideoId) {
+    // Delete video
+    deleteVideo(deleteVideoId);
+  } else if (deleteChatId) {
+    // Delete chat
+    deleteChatHandler(deleteChatId);
   }
 });
 
